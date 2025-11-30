@@ -7,7 +7,7 @@ import assets
 from tilemap import load_dinner_tilemap, load_collision_map
 
 # Debug flag - set to True to enable debug output and see collision boxes
-DEBUG = False
+DEBUG = True
 
 
 class DinnerScene(Scene):
@@ -58,7 +58,7 @@ class DinnerScene(Scene):
             "....Shani do you have it?",
         ]
 
-        # proposal overlay
+        # proposal overlay with questions
         self.proposal_active = False
         self.show_proposal = False
         self.fireworks = []
@@ -67,6 +67,16 @@ class DinnerScene(Scene):
         # after fireworks, show a short "That went well" message
         self.post_message_shown = False
         self.post_message_timer = 0.0
+        
+        # Only the marriage proposal question (no warm-up questions)
+        self.current_question = 0
+        self.questions = [
+            {
+                'question': 'Maria, will you marry me?',
+                'option1': 'YES',
+                'option2': 'NO'
+            }
+        ]
         
         # Emote system
         self.npc_emotes = []  # List of active emote states (npc_index, start_time)
@@ -293,11 +303,11 @@ class DinnerScene(Scene):
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if self.show_proposal and self.proposal_active:
                 mx, my = event.pos
-                box, yes_rect, no_rect = self._get_proposal_rects()
-                if yes_rect.collidepoint(mx, my):
-                    # Accepted
+                box, option1_rect, option2_rect = self._get_proposal_rects()
+                if option1_rect.collidepoint(mx, my):
+                    # Marriage proposal accepted!
                     self._start_fireworks()
-                elif no_rect.collidepoint(mx, my):
+                elif option2_rect.collidepoint(mx, my):
                     # NO is not clickable — ignore
                     pass
 
@@ -509,8 +519,8 @@ class DinnerScene(Scene):
                 except Exception:
                     pass
 
-        # Cursor repulsion logic: push the mouse away from the NO button when proposal overlay is active
-        if self.show_proposal and self.proposal_active and not self.fireworks_running:
+        # Cursor repulsion logic: push the mouse away from the NO button
+        if self.show_proposal and self.proposal_active and not self.fireworks_running and self.current_question == 0:
             try:
                 box, yes_rect, no_rect = self._get_proposal_rects()
                 mx, my = pygame.mouse.get_pos()
@@ -634,36 +644,45 @@ class DinnerScene(Scene):
             dialog_y = (h - 120) // 2 - 30  # dialog height is 120, moved up 30px
             self.dialog.draw(surface, dialog_x, dialog_y)
 
-        # proposal overlay
+        # proposal overlay with questions
         if self.show_proposal:
-            box, yes_rect, no_rect = self._get_proposal_rects()
+            box, option1_rect, option2_rect = self._get_proposal_rects()
             pygame.draw.rect(surface, (240, 240, 250), box)
             pygame.draw.rect(surface, (30, 30, 30), box, 2)
-            title = self.font.render("Maria, will you marry me?", True, (10, 10, 10))
+            
+            # Get current question
+            current_q = self.questions[self.current_question]
+            title = self.font.render(current_q['question'], True, (10, 10, 10))
             surface.blit(title, (box.x + (box.w - title.get_width())//2, box.y + 24))
 
-            # YES button
-            pygame.draw.rect(surface, (60, 180, 120), yes_rect)
-            ytxt = self.font.render("YES", True, (255, 255, 255))
-            surface.blit(ytxt, (yes_rect.x + (yes_rect.w - ytxt.get_width())//2, yes_rect.y + 12))
+            # Option 1 button (always correct answer)
+            pygame.draw.rect(surface, (60, 180, 120), option1_rect)
+            opt1txt = self.font.render(current_q['option1'], True, (255, 255, 255))
+            surface.blit(opt1txt, (option1_rect.x + (option1_rect.w - opt1txt.get_width())//2, option1_rect.y + 12))
 
-            # NO button (non-clickable) - visually wobble slightly when cursor near
-            # compute wobble based on current mouse distance
-            try:
-                mx, my = pygame.mouse.get_pos()
-                cx = no_rect.x + no_rect.w / 2
-                cy = no_rect.y + no_rect.h / 2
-                d = math.hypot(mx - cx, my - cy)
-                wobble = 0
-                if d < 160:
-                    wobble = int((160 - d) / 24)
-                wobble_rect = no_rect.move(0, -wobble)
-            except Exception:
-                wobble_rect = no_rect
-
-            pygame.draw.rect(surface, (200, 80, 80), wobble_rect)
-            ntxt = self.font.render("NO", True, (255, 255, 255))
-            surface.blit(ntxt, (wobble_rect.x + (wobble_rect.w - ntxt.get_width())//2, wobble_rect.y + 12))
+            # Option 2 button - wobble on marriage proposal question
+            if self.current_question == 0:  # Only one question (marriage proposal)
+                # NO button wobbles away from cursor
+                try:
+                    mx, my = pygame.mouse.get_pos()
+                    cx = option2_rect.x + option2_rect.w / 2
+                    cy = option2_rect.y + option2_rect.h / 2
+                    d = math.hypot(mx - cx, my - cy)
+                    wobble = 0
+                    if d < 160:
+                        wobble = int((160 - d) / 24)
+                    wobble_rect = option2_rect.move(0, -wobble)
+                except Exception:
+                    wobble_rect = option2_rect
+                
+                pygame.draw.rect(surface, (200, 80, 80), wobble_rect)
+                opt2txt = self.font.render(current_q['option2'], True, (255, 255, 255))
+                surface.blit(opt2txt, (wobble_rect.x + (wobble_rect.w - opt2txt.get_width())//2, wobble_rect.y + 12))
+            else:
+                # Regular button for non-marriage questions
+                pygame.draw.rect(surface, (180, 180, 190), option2_rect)
+                opt2txt = self.font.render(current_q['option2'], True, (255, 255, 255))
+                surface.blit(opt2txt, (option2_rect.x + (option2_rect.w - opt2txt.get_width())//2, option2_rect.y + 12))
 
         # fireworks
         if self.fireworks_running:
