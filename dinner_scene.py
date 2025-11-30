@@ -103,6 +103,19 @@ class DinnerScene(Scene):
             if not frames:
                 continue
             
+            # For walk animations, filter out transparent/empty frames for smoother looping
+            if 'walk' in name:
+                visible_frames = []
+                for frame in frames:
+                    try:
+                        mask = pygame.mask.from_surface(frame)
+                        if mask.count() > 0:  # Frame has visible pixels
+                            visible_frames.append(frame)
+                    except Exception:
+                        visible_frames.append(frame)  # Keep frame if mask fails
+                if visible_frames:
+                    frames = visible_frames
+            
             # Detect speed from animation name
             if 'idle' in name:
                 speed = IDLE_SPEED

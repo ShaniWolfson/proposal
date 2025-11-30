@@ -6,8 +6,6 @@ import os
 # Need pygame for Rect in load_collision_map
 if not pygame.get_init():
     pygame.init()
-
-
 class TileMap:
     """Loads and renders tilemaps from JavaScript layer files."""
     
@@ -188,3 +186,162 @@ def load_dinner_tilemap(dinner_folder_path):
             layers.append((tilemap, layer_data))
     
     return layers
+
+
+def load_apartment_tilemap(apartment_folder_path):
+    """Helper function to load the apartment scene tilemap from TMJ file.
+    
+    Args:
+        apartment_folder_path: Path to art/backgrounds/apartment folder
+    
+    Returns:
+        List of tuples: (TileMap instance, layer data array) for each layer
+    """
+    tmj_path = os.path.join(apartment_folder_path, 'apartment.tmj')
+    tileset_path = os.path.join(apartment_folder_path, 'untitled.png')
+    
+    if not os.path.exists(tmj_path) or not os.path.exists(tileset_path):
+        return []
+    
+    # Load the TMJ JSON file
+    with open(tmj_path, 'r') as f:
+        map_data = json.load(f)
+    
+    # Create tilemap with the single tileset
+    # The TMJ file has multiple tilesets, but we'll use the main one
+    tilemap = TileMap([tileset_path], tile_size=16)
+    
+    layers = []
+    for layer in map_data.get('layers', []):
+        if layer.get('type') == 'tilelayer' and layer.get('visible', True):
+            # Convert flat data array to 2D array
+            width = layer.get('width', 16)
+            height = layer.get('height', 16)
+            flat_data = layer.get('data', [])
+            
+            layer_data = []
+            for row in range(height):
+                row_data = flat_data[row * width:(row + 1) * width]
+                layer_data.append(row_data)
+            
+            layers.append((tilemap, layer_data))
+    
+    return layers
+
+
+def load_apartment_collision_map(apartment_folder_path, tile_size=16, scale=1.0):
+    """Load collision data from apartment TMJ file and return list of collision rectangles.
+    
+    Args:
+        apartment_folder_path: Path to art/backgrounds/apartment folder
+        tile_size: Base tile size in pixels (before scaling)
+        scale: Scale factor applied to the tilemap
+    
+    Returns:
+        List of pygame.Rect objects for collision polygons
+    """
+    tmj_path = os.path.join(apartment_folder_path, 'apartment.tmj')
+    
+    if not os.path.exists(tmj_path):
+        return []
+    
+    with open(tmj_path, 'r') as f:
+        map_data = json.load(f)
+    
+    collision_rects = []
+    
+    # Process object layers with collision polygons
+    for layer in map_data.get('layers', []):
+        if layer.get('type') == 'objectgroup':
+            layer_name = layer.get('name', '').lower()
+                
+            for obj in layer.get('objects', []):
+                if 'polygon' not in obj:
+                    continue
+                    
+                obj_x = obj.get('x', 0)
+                obj_y = obj.get('y', 0)
+                
+                # Filter furniture layer: skip chairs (y > 185), keep table
+                if 'funiture' in layer_name and obj_y > 185:
+                    continue
+                
+                # Convert polygon to bounding rect
+                polygon = obj.get('polygon', [])
+                if not polygon:
+                    continue
+                    
+                min_x = min(p['x'] for p in polygon)
+                max_x = max(p['x'] for p in polygon)
+                min_y = min(p['y'] for p in polygon)
+                max_y = max(p['y'] for p in polygon)
+                
+                # Apply position adjustments
+                y_offset = 0
+                if 'wall' in layer_name and 130 <= obj_y <= 132:
+                    y_offset = -50  # TV stand wall
+                elif 'funiture' in layer_name and 149 <= obj_y <= 151:
+                    y_offset = -50  # Center furniture
+                
+                rect = pygame.Rect(
+                    (obj_x + min_x) * scale,
+                    (obj_y + min_y) * scale + y_offset,
+                    (max_x - min_x) * scale,
+                    (max_y - min_y) * scale
+                )
+                collision_rects.append(rect)
+    
+    return collision_rects
+
+
+def load_apartment_object_rects(apartment_folder_path, tile_size=16, scale=1.0):
+    """Load object collision boxes from apartment TMJ file's Object Layer 1.
+    
+    Args:
+        apartment_folder_path: Path to art/backgrounds/apartment folder
+        tile_size: Base tile size in pixels (before scaling)
+        scale: Scale factor applied to the tilemap
+    
+    Returns:
+        List of pygame.Rect objects for the table objects (wine bottle, glasses, box)
+    """
+    tmj_path = os.path.join(apartment_folder_path, 'apartment.tmj')
+    
+    if not os.path.exists(tmj_path):
+        return []
+    
+    with open(tmj_path, 'r') as f:
+        map_data = json.load(f)
+    
+    object_rects = []
+    
+    # Process Object Layer 1 which contains wine bottle, glasses, and box
+    for layer in map_data.get('layers', []):
+        if layer.get('type') == 'objectgroup' and layer.get('name') == 'Object Layer 1':
+            for obj in layer.get('objects', []):
+                if 'polygon' not in obj:
+                    continue
+                    
+                obj_x = obj.get('x', 0)
+                obj_y = obj.get('y', 0)
+                
+                # Convert polygon to bounding rect
+                polygon = obj.get('polygon', [])
+                if not polygon:
+                    continue
+                    
+                min_x = min(p['x'] for p in polygon)
+                max_x = max(p['x'] for p in polygon)
+                min_y = min(p['y'] for p in polygon)
+                max_y = max(p['y'] for p in polygon)
+                
+                rect = pygame.Rect(
+                    (obj_x + min_x) * scale,
+                    (obj_y + min_y) * scale,
+                    (max_x - min_x) * scale,
+                    (max_y - min_y) * scale
+                )
+                object_rects.append(rect)
+    
+    return object_rects
+
