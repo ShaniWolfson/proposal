@@ -663,7 +663,8 @@ class ApartmentScene(Scene):
                 self.fade_alpha = 255
                 # Transition to next scene
                 if self.manager:
-                    self.manager.change_scene('dinner')
+                    from dinner_scene import DinnerScene
+                    self.manager.go_to(DinnerScene(self.manager))
 
     def draw(self, surface: pygame.Surface):
         surface.fill((20, 20, 30))
