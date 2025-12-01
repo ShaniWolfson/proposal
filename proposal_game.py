@@ -50,6 +50,11 @@ def main():
         assets.load_assets()
     except Exception:
         pass
+    
+    # Center the window on screen
+    import os
+    os.environ['SDL_VIDEO_CENTERED'] = '1'
+    
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption("Our Adventure — Prototype")
     clock = pygame.time.Clock()

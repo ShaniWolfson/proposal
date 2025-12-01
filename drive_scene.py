@@ -1,11 +1,12 @@
 import pygame
 import random
 import importlib
+import os
 from scene import Scene
 
 
 class DriveScene(Scene):
-    """Side-scrolling driving minigame.
+    """Night road driving scene with scrolling background.
 
     vehicle: 'car' or 'uhaul'
     duration: seconds to auto-complete (default 10)
@@ -17,12 +18,20 @@ class DriveScene(Scene):
         self.duration = duration
         self.timer = duration
         self.font = None
-        self.player_rect = pygame.Rect(120, 300, 56, 28)
+        
+        # Load night road background
+        self.night_road = None
+        self.road_x = 0
+        
+        # Load blue car sprite
+        self.blue_car = None
+        self.car_x = 200  # Fixed position on left side
+        self.car_y = 720 // 2  # Center vertically
+        self.car_speed = 300  # Up/down movement speed
+        
         self.obstacles = []
         self.spawn_timer = 0.0
-        self.scroll_speed = 220 if vehicle == 'car' else 180
-        self.avoid_color = (240, 100, 80)
-        self.bg_offset = 0
+        self.scroll_speed = 100  # Road scrolling speed (slowed down)
         self.crashed = False
         self.crash_timer = 0.0
 
@@ -32,6 +41,57 @@ class DriveScene(Scene):
         self.obstacles = []
         self.spawn_timer = 0.5
         self.crashed = False
+        self.road_x = 0
+        
+        # Load the night road background
+        road_path = os.path.join('art', 'backgrounds', 'date_drive', 'nightroad.png')
+        self.night_road = pygame.image.load(road_path).convert_alpha()
+        
+        # Load car sprites using the loader
+        vehicles_path = os.path.join('art', 'backgrounds', 'date_drive')
+        veh_files = os.listdir(vehicles_path)
+        veh_file = [f for f in veh_files if 'vehicles' in f.lower()][0]
+        vehicles_sheet = pygame.image.load(os.path.join(vehicles_path, veh_file)).convert_alpha()
+        
+        # Sheet is 224x960 with 2 columns (left, right facing)
+        sheet_w, sheet_h = vehicles_sheet.get_size()
+        cols = 2
+        sprite_w = sheet_w // cols  # 112 pixels per column
+        
+        # Detect number of rows - each car has variable height
+        # We'll use the detected car positions
+        car_positions = [
+            (7, 57),    # Car 0
+            (71, 57),   # Car 1
+            (135, 57),  # Car 2
+            (199, 57),  # Car 3 (yellow car)
+            (265, 55),  # Car 4
+            (331, 53),  # Car 5
+            (395, 53),  # Car 6
+            (459, 53),  # Car 7
+            (528, 48),  # Car 8
+            (587, 53),  # Car 9
+            (649, 55),  # Car 10
+            (713, 55),  # Car 11
+            (775, 57),  # Car 12
+            (840, 56),  # Car 13
+            (907, 53),  # Car 14
+        ]
+        
+        # Extract Car #3 (yellow, 4th car, 0-indexed as 3)
+        car_index = 3
+        car_start_y, car_height = car_positions[car_index]
+        
+        # Get right-facing version (column 1)
+        car_rect = pygame.Rect(sprite_w, car_start_y, sprite_w, car_height)
+        car_sprite = vehicles_sheet.subsurface(car_rect).copy()
+        
+        # Scale up 2x for visibility
+        self.blue_car = pygame.transform.scale(car_sprite, (sprite_w * 2, car_height * 2))
+        
+        # Position car on left side and vertically centered on the road
+        self.car_x = 200
+        self.car_y = (720 - self.blue_car.get_height()) // 2
 
     def handle_event(self, event: pygame.event.EventType):
         pass
@@ -42,45 +102,26 @@ class DriveScene(Scene):
             if self.crash_timer <= 0:
                 self.crashed = False
         else:
+            # Scroll the road to the right (simulating forward movement)
+            self.road_x += self.scroll_speed * dt
+            
+            # Loop the road when it scrolls past the image width
+            if self.night_road:
+                road_width = self.night_road.get_width()
+                if self.road_x >= road_width:
+                    self.road_x -= road_width
+            
+            # Handle up/down movement
             keys = pygame.key.get_pressed()
             if keys[pygame.K_w] or keys[pygame.K_UP]:
-                self.player_rect.y -= int(300 * dt)
+                self.car_y -= int(self.car_speed * dt)
             if keys[pygame.K_s] or keys[pygame.K_DOWN]:
-                self.player_rect.y += int(300 * dt)
+                self.car_y += int(self.car_speed * dt)
 
-            # clamp
-            self.player_rect.y = max(40, min(self.player_rect.y, 720 - 40 - self.player_rect.height))
-
-            # spawn obstacles
-            self.spawn_timer -= dt
-            if self.spawn_timer <= 0:
-                self.spawn_timer = random.uniform(0.6, 1.2)
-                oy = random.randint(80, 720 - 80)
-                ow = 40 if random.random() < 0.6 else 24
-                oh = 24
-                rect = pygame.Rect(1280 + 10, oy, ow, oh)
-                ob_type = 'pothole'
-                if random.random() < 0.25:
-                    ob_type = 'jaywalker'
-                # store obstacle as a dict to avoid attaching attributes to Rect
-                self.obstacles.append({'rect': rect, 'type': ob_type})
-
-            # move obstacles
-            for o in list(self.obstacles):
-                o['rect'].x -= int(self.scroll_speed * dt)
-                if o['rect'].right < -50:
-                    self.obstacles.remove(o)
-
-            # collisions
-            for o in list(self.obstacles):
-                if self.player_rect.colliderect(o['rect']):
-                    # crash
-                    self.crashed = True
-                    self.crash_timer = 0.8
-                    try:
-                        self.obstacles.remove(o)
-                    except ValueError:
-                        pass
+            # Clamp car position to screen bounds
+            if self.blue_car:
+                car_height = self.blue_car.get_height()
+                self.car_y = max(0, min(self.car_y, 720 - car_height))
 
             self.timer -= dt
             if self.timer <= 0:
@@ -95,29 +136,53 @@ class DriveScene(Scene):
                     pass
 
     def draw(self, surface: pygame.Surface):
-        # sky
-        surface.fill((120, 180, 240))
-        # simple scrolling buildings
-        w, h = surface.get_size()
-        self.bg_offset = (self.bg_offset + int(self.scroll_speed * 0.02)) % 400
-        for i in range(-2, 6):
-            bx = (i * 200) - (self.bg_offset % 200)
-            pygame.draw.rect(surface, (200 - (i % 3) * 20, 180, 160), (bx, h - 220, 140, 180))
-
-        # road
-        pygame.draw.rect(surface, (40, 40, 40), (0, h - 120, w, 120))
-        # lane lines
-        for x in range(0, w, 80):
-            pygame.draw.rect(surface, (220, 220, 80), (x + ((int(self.bg_offset) // 10) % 80), h - 60, 40, 6))
-
-        # draw obstacles
-        for o in self.obstacles:
-            color = (100, 80, 60) if o.get('type') == 'pothole' else (220, 180, 60)
-            pygame.draw.rect(surface, color, o['rect'])
-
-        # draw player vehicle
-        car_color = (60, 140, 220) if self.vehicle == 'car' else (240, 140, 60)
-        pygame.draw.rect(surface, car_color, self.player_rect)
+        # Fill black background
+        surface.fill((0, 0, 0))
+        
+        # Draw the scrolling night road
+        if self.night_road:
+            # Map is 300 tiles wide x 16 tiles tall (4800px wide x 256px tall at 16px per tile)
+            # Show 16x16 tiles at a time, scaled to 1280x720
+            # Each tile is 16x16 pixels (4800 / 300 = 16px per tile)
+            tile_size = 16  # Each tile is 16x16 pixels
+            
+            # We want to show 16x16 tiles (same as apartment/dinner scenes)
+            view_width = tile_size * 16
+            view_height = tile_size * 16
+            
+            # Calculate which section to show based on scroll position
+            offset_x = int(self.road_x) % self.night_road.get_width()
+            
+            # Extract the 16x16 tile section from the background
+            # Since background is only 256px tall, we'll need to handle it differently
+            # Let's just show a 1280x720 section and scroll it
+            section_width = min(1280, self.night_road.get_width())
+            section_height = self.night_road.get_height()
+            
+            # Create a view surface showing the scrolling section
+            view = pygame.Surface((1280, 720))
+            view.fill((0, 0, 0))
+            
+            # Scale the road section to fit screen
+            offset = int(self.road_x % self.night_road.get_width())
+            
+            # Blit two copies for seamless scrolling at native resolution
+            # Road is 256px tall, we need to show 16 tiles (256px) centered in 720px screen
+            # Scale up to fill screen better: 720/256 = 2.8125x
+            scale = 720 / self.night_road.get_height()
+            scaled_width = int(self.night_road.get_width() * scale)
+            scaled_height = 720
+            scaled_road = pygame.transform.scale(self.night_road, (scaled_width, scaled_height))
+            
+            for i in range(2):
+                x_pos = -int(offset * scale) + (i * scaled_width)
+                view.blit(scaled_road, (x_pos, 0))
+            
+            surface.blit(view, (0, 0))
+        
+        # Draw the blue car
+        if self.blue_car:
+            surface.blit(self.blue_car, (int(self.car_x), int(self.car_y)))
 
         # UI
         t = self.font.render(f"Time: {int(self.timer)}s", True, (255, 255, 255))
