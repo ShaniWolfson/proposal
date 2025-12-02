@@ -6,10 +6,12 @@ from scene import Scene
 
 
 class DriveScene(Scene):
-    """Night road driving scene with scrolling background.
+    """Night road driving scene with scrolling background and traffic cars.
 
-    vehicle: 'car' or 'uhaul'
-    duration: seconds to auto-complete (default 60)
+    Args:
+        vehicle: 'car' or 'uhaul' (currently unused)
+        duration: seconds to auto-complete (default 35)
+        manager: Scene manager for transitions
     """
 
     def __init__(self, vehicle='car', duration=35.0, manager=None):
@@ -29,10 +31,7 @@ class DriveScene(Scene):
         self.car_y = 720 // 2  # Center vertically
         self.car_speed = 300  # Up/down movement speed
         self.car_speed_x = 200  # Left/right movement speed
-        
-        self.obstacles = []
-        self.spawn_timer = 0.0
-        self.scroll_speed = 100  # Road scrolling speed (slowed down)
+        self.scroll_speed = 100  # Road scrolling speed
         self.crashed = False
         self.crash_timer = 0.0
         self.bump_velocity_x = 0  # Smooth bump knockback velocity
@@ -55,18 +54,14 @@ class DriveScene(Scene):
     def start(self):
         self.font = pygame.font.SysFont(None, 28)
         self.timer = self.duration
-        self.obstacles = []
-        self.spawn_timer = 0.5
         self.crashed = False
         self.road_x = 0
         
-        # Set road boundaries based on the actual road rendering
-        # Road is scaled to 720px tall and offset by 150px down
-        # The actual drivable area is roughly in the middle third of the road
-        self.road_top = 160 + 200  # Start of drivable area (offset + margin)
-        self.road_bottom = 160 + 720  # End of drivable area (offset + height - margin)
-        self.road_left = 0  # Left edge of drivable road
-        self.road_right = 1000  # Right edge of drivable road
+        # Set road boundaries (drivable area)
+        self.road_top = 360  # Start of drivable area
+        self.road_bottom = 880  # End of drivable area
+        self.road_left = 0  # Left edge
+        self.road_right = 1000  # Right edge
         
         # Load the night road background
         road_path = os.path.join('art', 'backgrounds', 'date_drive', 'nightroad.png')
@@ -168,8 +163,7 @@ class DriveScene(Scene):
                     self.road_x -= road_width
             
             # Natural pull back - car drifts backward if not pressing right
-            drift_back_speed = 40  # Pixels per second the car drifts back (reduced for smoother feel)
-            keys = pygame.key.get_pressed()
+            drift_back_speed = 40  # Pixels per second
             if not (keys[pygame.K_d] or keys[pygame.K_RIGHT]):
                 # Drift backward naturally
                 self.car_x -= drift_back_speed * dt
@@ -278,34 +272,23 @@ class DriveScene(Scene):
         
         # Draw the scrolling night road
         if self.night_road:
-            # The tilemap is 300 tiles wide x 16 tiles tall (4800px x 256px at 16px per tile)
-            # Screen is 1280x720, we want to show tiles at proper scale
-            
-            # Scale factor to make the road fill the screen vertically and look bigger
-            # Road height is 256px, screen is 720px: scale = 720/256 = 2.8125
-            # Increase to 4x for bigger appearance
+            # Scale road to 3.5x for better visibility
             scale_factor = 3.5
-            tile_scaled = int(16 * scale_factor)  # Each tile becomes ~64 pixels
+            tile_scaled = int(16 * scale_factor)
             
-            # Calculate visible tiles
-            visible_tiles_x = int(1280 / tile_scaled) + 2  # +2 for partial tiles
-            
-            # Scroll position in tiles
+            # Calculate scroll offset
             scroll_offset_pixels = int(self.road_x)
-            scroll_offset_tiles = scroll_offset_pixels / 16  # Convert to tile units
+            scroll_offset_tiles = scroll_offset_pixels / 16
             
-            # Scale the road once for efficiency
+            # Scale road once
             scaled_width = int(self.night_road.get_width() * scale_factor)
             scaled_height = int(self.night_road.get_height() * scale_factor)
             scaled_road = pygame.transform.scale(self.night_road, (scaled_width, scaled_height))
             
-            # Draw seamlessly scrolling road (shifted down)
+            # Draw two copies for seamless scrolling loop
             offset_x = int(scroll_offset_tiles * tile_scaled) % scaled_width
-            y_offset = 0  # Move the road down 200 pixels
-            
-            # Blit two copies for seamless loop
-            surface.blit(scaled_road, (-offset_x, y_offset))
-            surface.blit(scaled_road, (scaled_width - offset_x, y_offset))
+            surface.blit(scaled_road, (-offset_x, 0))
+            surface.blit(scaled_road, (scaled_width - offset_x, 0))
         
         # Draw traffic cars
         for traffic_car in self.traffic_cars:
