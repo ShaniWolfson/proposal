@@ -43,6 +43,19 @@ class DriveScene(Scene):
         self.traffic_spawn_interval = 3.0  # Spawn a car every 3 seconds
         self.next_car_index = 0  # Track which car to spawn next for cycling
         
+        # Dialogue messages for collisions
+        self.collision_messages = [
+            "Hey watch where you are going!",
+            "Hey speedy slow down!",
+            "Watch it!",
+            "Learn to drive!",
+            "Everyone's always in a rush!",
+            "Stay in your lane!"
+        ]
+        self.current_message = None
+        self.message_timer = 0.0
+        self.message_duration = 2.0  # Show message for 2 seconds
+        
         # Fade out effect
         self.fade_out = False
         self.fade_alpha = 0
@@ -93,6 +106,10 @@ class DriveScene(Scene):
         self.traffic_cars = []
         self.traffic_spawn_timer = self.traffic_spawn_interval
         self.next_car_index = 0  # Start cycling from first car
+        
+        # Initialize message state
+        self.current_message = None
+        self.message_timer = 0.0
 
     def handle_event(self, event: pygame.event.EventType):
         pass
@@ -236,6 +253,9 @@ class DriveScene(Scene):
                             self.crash_timer = 0.2
                             self.bump_velocity_x = -150
                             self.bump_velocity_y = random.randint(-50, 50)
+                            # Show random collision message
+                            self.current_message = random.choice(self.collision_messages)
+                            self.message_timer = self.message_duration
                         
                         # Push player out of collision based on smallest overlap
                         if min_overlap == overlap_left:
@@ -250,6 +270,12 @@ class DriveScene(Scene):
             self.timer -= dt
             if self.timer <= 0 and not self.fade_out:
                 self.fade_out = True
+        
+        # Update message timer
+        if self.message_timer > 0:
+            self.message_timer -= dt
+            if self.message_timer <= 0:
+                self.current_message = None
         
         # Handle fade out
         if self.fade_out:
@@ -301,6 +327,29 @@ class DriveScene(Scene):
         # UI
         t = self.font.render(f"Time: {int(self.timer)}s", True, (255, 255, 255))
         surface.blit(t, (10, 10))
+        
+        # Draw collision message popup
+        if self.current_message:
+            # Create dialog box centered on screen
+            box_width = 500
+            box_height = 100
+            box_x = (1280 - box_width) // 2
+            box_y = 150
+            
+            # Draw semi-transparent background
+            dialog_bg = pygame.Surface((box_width, box_height))
+            dialog_bg.fill((40, 40, 50))
+            dialog_bg.set_alpha(220)
+            surface.blit(dialog_bg, (box_x, box_y))
+            
+            # Draw border
+            pygame.draw.rect(surface, (200, 200, 220), (box_x, box_y, box_width, box_height), 3)
+            
+            # Draw message text (centered)
+            message_font = pygame.font.SysFont(None, 36)
+            text_surf = message_font.render(self.current_message, True, (255, 255, 255))
+            text_rect = text_surf.get_rect(center=(box_x + box_width // 2, box_y + box_height // 2))
+            surface.blit(text_surf, text_rect)
         
         # Draw fade out overlay
         if self.fade_out and self.fade_alpha > 0:
