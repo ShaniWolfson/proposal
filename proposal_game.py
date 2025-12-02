@@ -6,9 +6,9 @@ from menu_scene import MenuScene
 import assets
 
 
-# 16x16 tile grid at 64px per tile = 1024x1024
+# Screen dimensions - reduced height to prevent cutoff
 SCREEN_WIDTH = 1024
-SCREEN_HEIGHT = 1024
+SCREEN_HEIGHT = 768
 
 
 # Keep GameScene available as a simple test, but start at the MenuScene for quick navigation

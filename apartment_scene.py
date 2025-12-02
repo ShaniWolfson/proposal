@@ -9,7 +9,7 @@ from tilemap import load_apartment_tilemap, load_apartment_collision_map, load_a
 from lpc_demo import AnimationManager, IDLE_SPEED, WALK_SPEED
 
 # Debug flag - set to True to enable debug output and see collision boxes
-DEBUG = True
+DEBUG = False
 
 
 class ApartmentScene(Scene):

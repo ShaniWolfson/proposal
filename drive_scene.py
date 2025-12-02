@@ -23,20 +23,33 @@ class DriveScene(Scene):
         self.timer = duration
         self.font = None
         
-        # Load road background
+        # Constants
+        self.PLAYER_CAR_SCALE = 2
+        self.TRAFFIC_CAR_SCALE = 2
+        self.ROAD_SCALE = 3.0
+        self.DRIFT_BACK_SPEED = 40
+        self.SCROLL_SPEED_BOOST = 1.2
+        self.FRICTION = 5.0
+        self.EXCLUDED_CARS = {9}  # Car #9 is empty space
+        
+        # Road and scrolling
         self.road_bg = None
         self.road_x = 0
+        self.scroll_speed = 70
+        self.road_top = 350  # Moved down from 360
+        self.road_bottom = 730  # Moved down from 880
+        self.road_left = 0
+        self.road_right = 1000
         
-        # Load blue car sprite
+        # Player car
         self.blue_car = None
-        self.car_x = 200  # Starting X position
-        self.car_y = 720 // 2  # Center vertically
-        self.car_speed = 300  # Up/down movement speed
-        self.car_speed_x = 200  # Left/right movement speed
-        self.scroll_speed = 70  # Road scrolling speed (reduced for less nausea)
+        self.car_x = 200
+        self.car_y = 720 // 2
+        self.car_speed = 300  # Up/down
+        self.car_speed_x = 200  # Left/right
         self.crashed = False
         self.crash_timer = 0.0
-        self.bump_velocity_x = 0  # Smooth bump knockback velocity
+        self.bump_velocity_x = 0
         self.bump_velocity_y = 0
         
         # Traffic cars
@@ -58,26 +71,21 @@ class DriveScene(Scene):
         self.current_message = None
         self.message_timer = 0.0
         self.message_duration = 2.0  # Show message for 2 seconds
+        self.message_cooldown = 0.0  # Cooldown before next message can appear
+        self.message_cooldown_duration = 1.0  # Wait 1 second after message disappears
         
         # Fade out effect
         self.fade_out = False
         self.fade_alpha = 0
-        
-        # Road boundaries (y coordinates with offset applied)
-        self.road_top = 150 + 100  # y_offset + some margin for top of road
-        self.road_bottom = 150 + 720 - 100  # y_offset + scaled_height - margin for bottom
 
     def start(self):
         self.font = pygame.font.SysFont(None, 28)
         self.timer = self.duration
         self.crashed = False
         self.road_x = 0
-        
-        # Set road boundaries (drivable area)
-        self.road_top = 360  # Start of drivable area
-        self.road_bottom = 880  # End of drivable area
-        self.road_left = 0  # Left edge
-        self.road_right = 1000  # Right edge
+        self.current_message = None
+        self.message_timer = 0.0
+        self.message_cooldown = 0.0
         
         # Load the road background based on time of day
         if self.time_of_day == 'day':
@@ -95,50 +103,50 @@ class DriveScene(Scene):
                                         directions=["left", "right", "front", "back"],
                                         split_first_col=True)
         
-        # Choose player car based on time of day
-        # Night: car #3 (yellow car), Day: car #12 (white and orange van)
-        car_index = 12 if self.time_of_day == 'day' else 3
+        # Choose and scale player car based on time of day
+        car_index = self._get_player_car_index()
         car_sprite = self.all_cars[car_index]["right"]
+        self.blue_car = pygame.transform.scale(
+            car_sprite,
+            (car_sprite.get_width() * self.PLAYER_CAR_SCALE, 
+             car_sprite.get_height() * self.PLAYER_CAR_SCALE)
+        )
         
-        # Scale up 2x for visibility
-        self.blue_car = pygame.transform.scale(car_sprite, 
-                                              (car_sprite.get_width() * 2, 
-                                               car_sprite.get_height() * 2))
+        # Position car vertically centered in the drivable area
+        self.car_y = self.road_top + (self.road_bottom - self.road_top - self.blue_car.get_height()) // 2
         
-        # Position car on left side and vertically centered on the road
-        self.car_x = 200
-        self.car_y = (720 - self.blue_car.get_height()) // 2
-        
-        # Initialize traffic cars list
+        # Initialize traffic
         self.traffic_cars = []
         self.traffic_spawn_timer = self.traffic_spawn_interval
-        self.next_car_index = 0  # Start cycling from first car
-        
-        # Initialize message state
-        self.current_message = None
-        self.message_timer = 0.0
+        self.next_car_index = 0
+
+    def _get_player_car_index(self):
+        """Get player car index based on time of day."""
+        return 12 if self.time_of_day == 'day' else 3
+    
+    def _get_available_car_indices(self):
+        """Get list of car indices available for traffic (excludes player car and empty slots)."""
+        player_car = self._get_player_car_index()
+        return [i for i in range(len(self.all_cars)) 
+                if i != player_car and i not in self.EXCLUDED_CARS]
 
     def handle_event(self, event: pygame.event.EventType):
         pass
     
     def spawn_traffic_car(self):
         """Spawn a traffic car on the road, cycling through available cars."""
-        # Get list of available cars (exclude the player's car and car #9 which is empty)
-        player_car_index = 12 if self.time_of_day == 'day' else 3
-        available_cars = [i for i in range(len(self.all_cars)) if i != player_car_index and i != 9]
+        available_cars = self._get_available_car_indices()
         
-        # Cycle through cars instead of random
+        # Cycle through cars
         car_index = available_cars[self.next_car_index % len(available_cars)]
         self.next_car_index += 1
         
-        # All traffic cars face right
-        direction = "right"
-        car_sprite = self.all_cars[car_index][direction]
-        
-        # Scale up 2x like player car
-        scaled_sprite = pygame.transform.scale(car_sprite, 
-                                              (car_sprite.get_width() * 2, 
-                                               car_sprite.get_height() * 2))
+        car_sprite = self.all_cars[car_index]["right"]
+        scaled_sprite = pygame.transform.scale(
+            car_sprite,
+            (car_sprite.get_width() * self.TRAFFIC_CAR_SCALE, 
+             car_sprite.get_height() * self.TRAFFIC_CAR_SCALE)
+        )
         
         # Spawn on right side of screen, random Y within road bounds
         spawn_x = 1280  # Start just off screen to the right
@@ -176,7 +184,7 @@ class DriveScene(Scene):
             # Dynamic scroll speed - speed up when moving right
             current_scroll_speed = self.scroll_speed
             if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
-                current_scroll_speed = self.scroll_speed * 1.2  # 20% faster when moving right (reduced for smoother feel)
+                current_scroll_speed = self.scroll_speed * self.SCROLL_SPEED_BOOST
             
             # Scroll the road to the right (simulating forward movement)
             self.road_x += current_scroll_speed * dt
@@ -188,19 +196,16 @@ class DriveScene(Scene):
                     self.road_x -= road_width
             
             # Natural pull back - car drifts backward if not pressing right
-            drift_back_speed = 40  # Pixels per second
             if not (keys[pygame.K_d] or keys[pygame.K_RIGHT]):
-                # Drift backward naturally
-                self.car_x -= drift_back_speed * dt
+                self.car_x -= self.DRIFT_BACK_SPEED * dt
             
             # Apply bump velocity with friction
             if self.bump_velocity_x != 0 or self.bump_velocity_y != 0:
                 self.car_x += self.bump_velocity_x * dt
                 self.car_y += self.bump_velocity_y * dt
                 # Apply friction to slow down bump
-                friction = 5.0
-                self.bump_velocity_x *= (1.0 - friction * dt)
-                self.bump_velocity_y *= (1.0 - friction * dt)
+                self.bump_velocity_x *= (1.0 - self.FRICTION * dt)
+                self.bump_velocity_y *= (1.0 - self.FRICTION * dt)
                 # Stop if very slow
                 if abs(self.bump_velocity_x) < 1:
                     self.bump_velocity_x = 0
@@ -261,9 +266,10 @@ class DriveScene(Scene):
                             self.crash_timer = 0.2
                             self.bump_velocity_x = -150
                             self.bump_velocity_y = random.randint(-50, 50)
-                            # Show random collision message
-                            self.current_message = random.choice(self.collision_messages)
-                            self.message_timer = self.message_duration
+                            # Show random collision message (only if cooldown expired)
+                            if self.message_cooldown <= 0:
+                                self.current_message = random.choice(self.collision_messages)
+                                self.message_timer = self.message_duration
                         
                         # Push player out of collision based on smallest overlap
                         if min_overlap == overlap_left:
@@ -284,6 +290,12 @@ class DriveScene(Scene):
             self.message_timer -= dt
             if self.message_timer <= 0:
                 self.current_message = None
+                # Start cooldown after message disappears
+                self.message_cooldown = self.message_cooldown_duration
+        
+        # Update message cooldown
+        if self.message_cooldown > 0:
+            self.message_cooldown -= dt
         
         # Handle fade out
         if self.fade_out:
@@ -301,22 +313,19 @@ class DriveScene(Scene):
                     pass
 
     def draw(self, surface: pygame.Surface):
-        # Fill black background
         surface.fill((0, 0, 0))
         
         # Draw the scrolling road
         if self.road_bg:
-            # Scale road to 3.5x for better visibility
-            scale_factor = 3.5
-            tile_scaled = int(16 * scale_factor)
+            tile_scaled = int(16 * self.ROAD_SCALE)
             
             # Calculate scroll offset
             scroll_offset_pixels = int(self.road_x)
             scroll_offset_tiles = scroll_offset_pixels / 16
             
             # Scale road once
-            scaled_width = int(self.road_bg.get_width() * scale_factor)
-            scaled_height = int(self.road_bg.get_height() * scale_factor)
+            scaled_width = int(self.road_bg.get_width() * self.ROAD_SCALE)
+            scaled_height = int(self.road_bg.get_height() * self.ROAD_SCALE)
             scaled_road = pygame.transform.scale(self.road_bg, (scaled_width, scaled_height))
             
             # Draw two copies for seamless scrolling loop
