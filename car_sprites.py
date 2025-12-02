@@ -196,7 +196,7 @@ def load_car_sprites(path, expected_cols=4, directions=None, split_first_col=Fal
 # Demo usage:
 if __name__ == "__main__":
     pygame.init()
-    screen = pygame.display.set_mode((1040, 800))
+    screen = pygame.display.set_mode((1200, 800))
     pygame.display.set_caption("Car Sprite Sheet Demo - Alpha Detection")
     clock = pygame.time.Clock()
 

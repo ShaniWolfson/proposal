@@ -6,23 +6,25 @@ from scene import Scene
 
 
 class DriveScene(Scene):
-    """Night road driving scene with scrolling background and traffic cars.
+    """Driving scene with scrolling background and traffic cars.
 
     Args:
         vehicle: 'car' or 'uhaul' (currently unused)
         duration: seconds to auto-complete (default 35)
+        time_of_day: 'night' or 'day' (default 'night')
         manager: Scene manager for transitions
     """
 
-    def __init__(self, vehicle='car', duration=35.0, manager=None):
+    def __init__(self, vehicle='car', duration=35.0, time_of_day='night', manager=None):
         super().__init__(manager)
         self.vehicle = vehicle
         self.duration = duration
+        self.time_of_day = time_of_day
         self.timer = duration
         self.font = None
         
-        # Load night road background
-        self.night_road = None
+        # Load road background
+        self.road_bg = None
         self.road_x = 0
         
         # Load blue car sprite
@@ -31,7 +33,7 @@ class DriveScene(Scene):
         self.car_y = 720 // 2  # Center vertically
         self.car_speed = 300  # Up/down movement speed
         self.car_speed_x = 200  # Left/right movement speed
-        self.scroll_speed = 100  # Road scrolling speed
+        self.scroll_speed = 70  # Road scrolling speed (reduced for less nausea)
         self.crashed = False
         self.crash_timer = 0.0
         self.bump_velocity_x = 0  # Smooth bump knockback velocity
@@ -50,7 +52,8 @@ class DriveScene(Scene):
             "Watch it!",
             "Learn to drive!",
             "Everyone's always in a rush!",
-            "Stay in your lane!"
+            "Stay in your lane!",
+            "What you got a hot date or something?"
         ]
         self.current_message = None
         self.message_timer = 0.0
@@ -76,9 +79,12 @@ class DriveScene(Scene):
         self.road_left = 0  # Left edge
         self.road_right = 1000  # Right edge
         
-        # Load the night road background
-        road_path = os.path.join('art', 'backgrounds', 'date_drive', 'nightroad.png')
-        self.night_road = pygame.image.load(road_path).convert_alpha()
+        # Load the road background based on time of day
+        if self.time_of_day == 'day':
+            road_path = os.path.join('art', 'backgrounds', 'date_drive', 'dayroad.png')
+        else:
+            road_path = os.path.join('art', 'backgrounds', 'date_drive', 'nightroad.png')
+        self.road_bg = pygame.image.load(road_path).convert_alpha()
         
         # Load car sprites using the car_sprites loader
         from car_sprites import load_car_sprites
@@ -89,8 +95,9 @@ class DriveScene(Scene):
                                         directions=["left", "right", "front", "back"],
                                         split_first_col=True)
         
-        # Use car #3 (yellow car) facing right
-        car_index = 3
+        # Choose player car based on time of day
+        # Night: car #3 (yellow car), Day: car #12 (white and orange van)
+        car_index = 12 if self.time_of_day == 'day' else 3
         car_sprite = self.all_cars[car_index]["right"]
         
         # Scale up 2x for visibility
@@ -116,8 +123,9 @@ class DriveScene(Scene):
     
     def spawn_traffic_car(self):
         """Spawn a traffic car on the road, cycling through available cars."""
-        # Get list of available cars (exclude car 3 which is the player)
-        available_cars = [i for i in range(len(self.all_cars)) if i != 3]
+        # Get list of available cars (exclude the player's car and car #9 which is empty)
+        player_car_index = 12 if self.time_of_day == 'day' else 3
+        available_cars = [i for i in range(len(self.all_cars)) if i != player_car_index and i != 9]
         
         # Cycle through cars instead of random
         car_index = available_cars[self.next_car_index % len(available_cars)]
@@ -174,8 +182,8 @@ class DriveScene(Scene):
             self.road_x += current_scroll_speed * dt
             
             # Loop the road when it scrolls past the image width
-            if self.night_road:
-                road_width = self.night_road.get_width()
+            if self.road_bg:
+                road_width = self.road_bg.get_width()
                 if self.road_x >= road_width:
                     self.road_x -= road_width
             
@@ -296,8 +304,8 @@ class DriveScene(Scene):
         # Fill black background
         surface.fill((0, 0, 0))
         
-        # Draw the scrolling night road
-        if self.night_road:
+        # Draw the scrolling road
+        if self.road_bg:
             # Scale road to 3.5x for better visibility
             scale_factor = 3.5
             tile_scaled = int(16 * scale_factor)
@@ -307,9 +315,9 @@ class DriveScene(Scene):
             scroll_offset_tiles = scroll_offset_pixels / 16
             
             # Scale road once
-            scaled_width = int(self.night_road.get_width() * scale_factor)
-            scaled_height = int(self.night_road.get_height() * scale_factor)
-            scaled_road = pygame.transform.scale(self.night_road, (scaled_width, scaled_height))
+            scaled_width = int(self.road_bg.get_width() * scale_factor)
+            scaled_height = int(self.road_bg.get_height() * scale_factor)
+            scaled_road = pygame.transform.scale(self.road_bg, (scaled_width, scaled_height))
             
             # Draw two copies for seamless scrolling loop
             offset_x = int(scroll_offset_tiles * tile_scaled) % scaled_width

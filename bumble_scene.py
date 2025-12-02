@@ -54,7 +54,7 @@ class BumbleScene(Scene):
             if self.transition_timer <= 0:
                 # go to the car driving minigame
                 if self.manager:
-                    self.manager.go_to(DriveScene(vehicle='car', duration=10.0, manager=self.manager))
+                    self.manager.go_to(DriveScene('car', 10.0, 'night', self.manager))
 
     def draw(self, surface: pygame.Surface):
         surface.fill((40, 30, 60))

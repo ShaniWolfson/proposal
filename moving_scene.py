@@ -5,8 +5,8 @@ from drive_scene import DriveScene
 
 
 class UHaulDriveScene(DriveScene):
-    def __init__(self, duration=10.0, manager=None):
-        super().__init__(vehicle='uhaul', duration=duration, manager=manager)
+    def __init__(self, manager=None, duration=35.0):
+        super().__init__('uhaul', duration, 'day', manager)
 
     def update(self, dt: float):
         super().update(dt)
