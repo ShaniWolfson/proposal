@@ -51,8 +51,10 @@ class DriveScene(Scene):
         # Set road boundaries based on the actual road rendering
         # Road is scaled to 720px tall and offset by 150px down
         # The actual drivable area is roughly in the middle third of the road
-        self.road_top = 150 + 200  # Start of drivable area (offset + margin)
-        self.road_bottom = 150 + 720 - 150  # End of drivable area (offset + height - margin)
+        self.road_top = 160 + 200  # Start of drivable area (offset + margin)
+        self.road_bottom = 160 + 720  # End of drivable area (offset + height - margin)
+        self.road_left = 0  # Left edge of drivable road
+        self.road_right = 1000  # Right edge of drivable road
         
         # Load the night road background
         road_path = os.path.join('art', 'backgrounds', 'date_drive', 'nightroad.png')
@@ -113,10 +115,9 @@ class DriveScene(Scene):
             if self.blue_car:
                 car_height = self.blue_car.get_height()
                 car_width = self.blue_car.get_width()
-                # Clamp to road boundaries (top and bottom edges)
+                # Clamp to road boundaries (all edges)
                 self.car_y = max(self.road_top, min(self.car_y, self.road_bottom - car_height))
-                # Clamp to screen bounds (left and right)
-                self.car_x = max(0, min(self.car_x, 1280 - car_width))
+                self.car_x = max(self.road_left, min(self.car_x, self.road_right - car_width))
 
             self.timer -= dt
             if self.timer <= 0:
