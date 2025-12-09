@@ -26,12 +26,12 @@ class ApartmentScene(Scene):
         self.dialog = None
         
         # Maria character
-        self.player_pos = [-100, 824]  # Start off-screen left, will move to door after delay
+        self.player_pos = [-100, 624]  # Start off-screen left, will move to door after delay (824 - 200 offset)
         self.player_speed = 200
         self.player_facing = 'right'
         
         # Shani character (standing by the table)
-        self.shani_pos = [750, 600]  # Near the table with wine
+        self.shani_pos = [750, 400]  # Near the table with wine (600 - 200 offset)
         self.shani_facing = 'left'
         
         # Cutscene state
@@ -44,7 +44,8 @@ class ApartmentScene(Scene):
         
         # Background image
         self.background = None
-        self.background_scale = 4.0  # Scale 256x256 to 1024x1024
+        self.background_scale = 4.0  # Scale 256x256 to 1024x1024 to fill screen width
+        self.background_offset_y = -200  # Offset upward to cut off top and show more floor
         self.collision_rects = []
         
         # Animation managers
@@ -108,7 +109,7 @@ class ApartmentScene(Scene):
         
         apartment_folder = os.path.join('art', 'backgrounds', 'apartment')
         try:
-            # Load and scale background image (256x256 -> 1024x1024)
+            # Load and scale background image (256x256 -> 1024x1024 to fill screen width, then offset)
             bg_path = os.path.join(apartment_folder, 'untitled.png')
             self.background = pygame.image.load(bg_path).convert()
             self.background = pygame.transform.scale(self.background, (1024, 1024))
@@ -120,12 +121,20 @@ class ApartmentScene(Scene):
                 scale=self.background_scale
             )
             
+            # Apply background offset to collision rects
+            for rect in self.collision_rects:
+                rect.y += self.background_offset_y
+            
             # Load object collision boxes from TMJ Object Layer 1
             object_rects = load_apartment_object_rects(
                 apartment_folder,
                 tile_size=16,
                 scale=self.background_scale
             )
+            
+            # Apply background offset to object rects
+            for rect in object_rects:
+                rect.y += self.background_offset_y
             
             # Sort objects by x-position (left to right) and assign to interaction boxes
             if len(object_rects) >= 4:
@@ -135,16 +144,19 @@ class ApartmentScene(Scene):
                 self.wine_bottle_rect = sorted_objs[2]  # 3rd from left
                 self.wine_glass2_rect = sorted_objs[3]  # Rightmost
             
-            # Add manual table collision
-            self.collision_rects.append(pygame.Rect(320, 830, 300, 70))
+            # Add manual table collision (830 * 4.0 scale - 200 offset)
+            table_y = int(830 * self.background_scale / 3.0) + self.background_offset_y
+            table_x = int(320 * self.background_scale / 3.0)
+            table_width = int(300 * self.background_scale / 3.0)
+            self.collision_rects.append(pygame.Rect(table_x, table_y, table_width, 70))
             
-            # Add boundary walls
+            # Add boundary walls (account for background offset)
             wall_thickness = 10
             self.collision_rects.extend([
-                pygame.Rect(0, 0, 1024, wall_thickness),  # Top
-                pygame.Rect(0, 1014, 1024, wall_thickness),  # Bottom
-                pygame.Rect(35, 0, wall_thickness, 1024),  # Left (offset to avoid black area)
-                pygame.Rect(1014, 0, wall_thickness, 1024)  # Right
+                pygame.Rect(0, self.background_offset_y, 1024, wall_thickness),  # Top
+                pygame.Rect(0, 768 - wall_thickness, 1024, wall_thickness),  # Bottom
+                pygame.Rect(0, self.background_offset_y, wall_thickness, 1024),  # Left
+                pygame.Rect(1024 - wall_thickness, self.background_offset_y, wall_thickness, 1024)  # Right
             ])
             
         except Exception as e:
@@ -318,10 +330,10 @@ class ApartmentScene(Scene):
                     if not self.game_interaction_active:
                         self.game_interaction_active = True
                         # Position Shani at specific chair location (right side)
-                        # She's at [230, 824] after greeting, needs to go down then right
-                        self.shani_target_pos = [480, 700]
+                        # 700 - 200 offset = 500
+                        self.shani_target_pos = [480, 500]
                         # Position Maria at her chair location (left side)
-                        self.maria_target_pos = [350, 700]
+                        self.maria_target_pos = [350, 500]
                         if DEBUG:
                             print(f"Game interaction activated! Targets set: Maria={self.maria_target_pos}, Shani={self.shani_target_pos}")
                     
@@ -394,7 +406,7 @@ class ApartmentScene(Scene):
             elif self.cutscene_step == 1:
                 # Step 1: Shani walks towards Maria using substeps
                 target_x = 230  # Right side of Maria (150 + 80 for spacing)
-                target_y = 824
+                target_y = 624  # 824 - 200 offset
                 
                 # Substep 0: Move left to target x
                 if self.cutscene_substep == 0:
@@ -533,9 +545,10 @@ class ApartmentScene(Scene):
                 target_x, target_y = self.shani_target_pos
                 speed = 180
                 
-                # Substep 0: Move up to target y
+                # Substep 0: Move up higher to avoid Maria (to y=350)
                 if self.shani_game_substep == 0:
-                    if abs(self.shani_pos[1] - target_y) > 5:
+                    intermediate_y = 350
+                    if self.shani_pos[1] > intermediate_y + 5:
                         self.shani_pos[1] -= speed * dt
                         facing = 'up'
                         
@@ -544,14 +557,28 @@ class ApartmentScene(Scene):
                             if self.shani_anim.current != walk_anim:
                                 self.shani_anim.play(walk_anim)
                     else:
-                        self.shani_pos[1] = target_y
+                        self.shani_pos[1] = intermediate_y
                         self.shani_game_substep = 1
                 
-                # Substep 1: Move right to final target x
+                # Substep 1: Move right to target x
                 elif self.shani_game_substep == 1:
                     if abs(self.shani_pos[0] - target_x) > 5:
                         self.shani_pos[0] += speed * dt
                         facing = 'right'
+                        
+                        if self.shani_anim:
+                            walk_anim = f'walk_{facing}'
+                            if self.shani_anim.current != walk_anim:
+                                self.shani_anim.play(walk_anim)
+                    else:
+                        self.shani_pos[0] = target_x
+                        self.shani_game_substep = 2
+                
+                # Substep 2: Move down to final target y (chair position)
+                elif self.shani_game_substep == 2:
+                    if abs(self.shani_pos[1] - target_y) > 5:
+                        self.shani_pos[1] += speed * dt
+                        facing = 'down'
                         
                         if self.shani_anim:
                             walk_anim = f'walk_{facing}'
@@ -671,7 +698,7 @@ class ApartmentScene(Scene):
         
         # Draw background image if available
         if self.background:
-            surface.blit(self.background, (0, 0))
+            surface.blit(self.background, (0, self.background_offset_y))
         else:
             # Fallback if image didn't load
             surface.fill((60, 50, 70))
@@ -687,10 +714,14 @@ class ApartmentScene(Scene):
         # Redraw wine glass on top of Shani when she's sitting (to fix layering)
         if self.shani_sitting and self.background:
             # Extract and redraw the wine glass region from background
-            # wine_glass2_rect is around x=538, y=808
+            # Need to get the rect position relative to the background (without offset)
             glass_rect = self.wine_glass2_rect
             if glass_rect:
-                glass_subsurface = self.background.subsurface(glass_rect)
+                # The glass rect has already been offset, so subtract it to get background coordinates
+                bg_rect = pygame.Rect(glass_rect.x, glass_rect.y - self.background_offset_y, 
+                                     glass_rect.width, glass_rect.height)
+                glass_subsurface = self.background.subsurface(bg_rect)
+                # Blit at the screen position (which includes the offset)
                 surface.blit(glass_subsurface, (glass_rect.x, glass_rect.y))
         
         # Draw Maria
@@ -705,7 +736,11 @@ class ApartmentScene(Scene):
         if self.maria_sitting and self.background:
             glass_rect = self.wine_glass1_rect
             if glass_rect:
-                glass_subsurface = self.background.subsurface(glass_rect)
+                # The glass rect has already been offset, so subtract it to get background coordinates
+                bg_rect = pygame.Rect(glass_rect.x, glass_rect.y - self.background_offset_y,
+                                     glass_rect.width, glass_rect.height)
+                glass_subsurface = self.background.subsurface(bg_rect)
+                # Blit at the screen position (which includes the offset)
                 surface.blit(glass_subsurface, (glass_rect.x, glass_rect.y))
         
         # Debug: draw collision boxes

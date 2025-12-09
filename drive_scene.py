@@ -243,6 +243,33 @@ class DriveScene(Scene):
                 if car['x'] + car['sprite'].get_width() < 0:
                     self.traffic_cars.remove(car)
             
+            # Prevent traffic cars from overlapping each other
+            for i, car1 in enumerate(self.traffic_cars):
+                car1_rect = pygame.Rect(car1['x'], car1['y'], 
+                                       car1['sprite'].get_width(), 
+                                       car1['sprite'].get_height())
+                for j, car2 in enumerate(self.traffic_cars):
+                    if i >= j:  # Skip self and already checked pairs
+                        continue
+                    car2_rect = pygame.Rect(car2['x'], car2['y'],
+                                           car2['sprite'].get_width(),
+                                           car2['sprite'].get_height())
+                    if car1_rect.colliderect(car2_rect):
+                        # Match speeds so they move together (use slower speed)
+                        slower_speed = max(car1['speed'], car2['speed'])  # max because speeds are negative
+                        car1['speed'] = slower_speed
+                        car2['speed'] = slower_speed
+                        
+                        # Push them apart slightly if overlapping
+                        overlap_x = (car1_rect.right - car2_rect.left) if car1['x'] < car2['x'] else (car2_rect.right - car1_rect.left)
+                        if overlap_x > 0:
+                            if car1['x'] < car2['x']:
+                                car1['x'] -= overlap_x / 2
+                                car2['x'] += overlap_x / 2
+                            else:
+                                car1['x'] += overlap_x / 2
+                                car2['x'] -= overlap_x / 2
+            
             # Check collision with traffic cars - proper blocking collision
             if self.blue_car:
                 player_rect = pygame.Rect(self.car_x, self.car_y, car_width, car_height)
