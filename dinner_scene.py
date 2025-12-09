@@ -706,9 +706,9 @@ class DinnerScene(Scene):
         # dialog box - centered on screen
         if self.dialog:
             w, h = surface.get_size()
-            # Center horizontally and vertically, moved up 30 pixels
+            # Center horizontally and vertically, moved up 80 pixels
             dialog_x = (w - 760) // 2  # dialog width is 760
-            dialog_y = (h - 120) // 2 - 30  # dialog height is 120, moved up 30px
+            dialog_y = (h - 120) // 2 - 80  # dialog height is 120, moved up 80px
             self.dialog.draw(surface, dialog_x, dialog_y)
 
         # proposal overlay with questions
