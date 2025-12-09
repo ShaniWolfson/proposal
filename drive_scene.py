@@ -401,6 +401,3 @@ class DriveScene(Scene):
             fade_surface.fill((0, 0, 0))
             fade_surface.set_alpha(int(self.fade_alpha))
             surface.blit(fade_surface, (0, 0))
-        hint = "Use WASD or Arrow Keys to move" if not self.crashed else "Crashed! Recovering..."
-        hsurf = self.font.render(hint, True, (255, 255, 255))
-        surface.blit(hsurf, (20, 50))

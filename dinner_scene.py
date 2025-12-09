@@ -7,7 +7,7 @@ import assets
 from tilemap import load_dinner_tilemap, load_collision_map
 
 # Debug flag - set to True to enable debug output and see collision boxes
-DEBUG = True
+DEBUG = False
 
 
 class DinnerScene(Scene):
@@ -20,14 +20,14 @@ class DinnerScene(Scene):
     - Mouse click YES on proposal overlay to accept
     """
     
-    # NPC positions for drawing and collision detection
+    # NPC positions for drawing and collision detection (adjusted for -200 background offset)
     NPC_POSITIONS = [
-        (200, 580),   # Mom - left side
-        (280, 580),   # Dad - next to Mom
-        (850, 580),   # Gio - right side
-        (450, 590),   # Loriana - bottom left
-        (550, 590),   # Oresti - bottom left
-        (730, 640),   # Marisa - bottom right
+        (200, 380),   # Mom - left side (580 - 200)
+        (280, 380),   # Dad - next to Mom (580 - 200)
+        (850, 380),   # Gio - right side (580 - 200)
+        (450, 390),   # Loriana - bottom left (590 - 200)
+        (550, 390),   # Oresti - bottom left (590 - 200)
+        (730, 440),   # Marisa - bottom right (640 - 200)
     ]
 
     def __init__(self, manager=None):
@@ -43,13 +43,16 @@ class DinnerScene(Scene):
             ("Oresti", "Oh so you can play a video game but you can't play DND? Just kiddingyou did well kiddo"),
             ("Marisa", "I can't believe I'm in a video game! Maria, you look amazing like this!"),
         ]
-        self.player_pos = (512, 780)  # Maria starting position - bottom center, slightly higher
+        self.background_offset_y = -200  # Offset upward to cut off top and show more floor
+        self.player_pos = (512, 580)  # Maria starting position - bottom center (780 - 200 offset)
         self.last_npc_collision = None  # Track last NPC collision for dialogue closing
+        self.interacting = False  # Track if currently in interaction dialogue
+        self.current_interaction = None  # Track which NPC is being interacted with
 
         # Player 2 (Shani) state
         self.p2_active = False
         self.p2_x = 1280.0 + 40.0  # Use float for smoother movement
-        self.p2_y = 420.0
+        self.p2_y = 550.0  # Same y as meeting position (750 - 200 offset)
         self.p2_speed = 180
         self.p2_stage = 0
         self.p2_dialog_lines = [
@@ -262,10 +265,33 @@ class DinnerScene(Scene):
             # Load collision map
             collision_file = os.path.join(dinner_folder, 'data', 'collisions.js')
             self.collision_rects = load_collision_map(collision_file, tile_size=16, scale=self.tilemap_scale)
+            
+            # Apply background offset to collision rects
+            for rect in self.collision_rects:
+                rect.y += self.background_offset_y
         except Exception as e:
             print(f"Could not load tilemap: {e}")
             self.tilemap_layers = []
             self.collision_rects = []
+        
+        # Load Shani's kneeling sprites from combat.png
+        self.shani_kneeling_sprites = []
+        try:
+            combat_path = os.path.join('art', 'characters', 'shani', 'combat.png')
+            combat_sheet = pygame.image.load(combat_path).convert_alpha()
+            # Second row (y=64) has left-facing kneeling frames
+            # Extract 2 kneeling sprites (frames at x=0 and x=64)
+            for i in range(2):
+                sprite = pygame.Surface((64, 64), pygame.SRCALPHA, 32)
+                sprite.blit(combat_sheet, (0, 0), (i * 64, 64, 64, 64))
+                self.shani_kneeling_sprites.append(sprite)
+        except Exception as e:
+            print(f"Could not load Shani kneeling sprites: {e}")
+            self.shani_kneeling_sprites = []
+        
+        self.shani_kneeling = False  # Track if Shani is in kneeling pose
+        self.kneeling_frame = 0  # Current kneeling frame
+        self.kneeling_timer = 0.0  # Timer for kneeling animation
         
         # Setup character animations
         self.maria_anim_mgr = self._setup_character('maria', ['idle', 'idle_down'])
@@ -295,11 +321,44 @@ class DinnerScene(Scene):
                 # Trigger proposal sequence - set meeting position
                 self.p2_active = True
                 self.p2_stage = 0
-                self.meeting_pos = (512, 750)
+                self.meeting_pos = (512, 550)  # 750 - 200 offset
                 self.maria_at_meeting = False
                 self.shani_at_meeting = False
             elif event.key in (pygame.K_SPACE, pygame.K_RETURN):
-                self.dialog.next()
+                # If dialogue is visible and we're interacting, advance it
+                if self.dialog.visible and self.interacting:
+                    self.dialog.next()
+                    if not self.dialog.visible:
+                        self.interacting = False
+                        self.current_interaction = None
+                    return
+                
+                # Check if near any NPC to start interaction
+                maria_x, maria_y = self.player_pos
+                # Maria's interaction box (5 pixels bigger in every direction than body collision)
+                maria_interact_rect = pygame.Rect(maria_x + 24 - 5, maria_y - 5, 48 + 10, 128 + 10)
+                
+                # Check each NPC for interaction
+                for npc_index, (npc_x, npc_y) in enumerate(self.NPC_POSITIONS):
+                    npc_rect = pygame.Rect(npc_x - 24, npc_y - 64, 48, 40)  # NPC collision area
+                    
+                    if maria_interact_rect.colliderect(npc_rect):
+                        # Start interaction with this NPC
+                        if npc_index < len(self.npcs):
+                            name, dialogue = self.npcs[npc_index]
+                            if dialogue:  # Only show dialogue if there is one
+                                self.dialog.set_lines([f"{name}: {dialogue}"])
+                                self.interacting = True
+                                self.current_interaction = npc_index
+                                
+                                # Trigger emote for this NPC
+                                if npc_index not in [idx for idx, _ in self.npc_emotes]:
+                                    self.npc_emotes.append((npc_index, 0.0))
+                                break
+                
+                # If no NPC interaction found, advance dialogue normally
+                if not self.interacting:
+                    self.dialog.next()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if self.show_proposal and self.proposal_active:
                 mx, my = event.pos
@@ -355,23 +414,14 @@ class DinnerScene(Scene):
             collision_result = self._check_collision(mx, my)
             if collision_result:
                 mx, my = old_mx, old_my
-                # If collision is with NPC, trigger their dialogue (only if not already showing)
+                # If collision is with NPC, just track it (dialogue triggered by spacebar now)
                 if isinstance(collision_result, tuple) and collision_result[0] == 'npc':
                     npc_index = collision_result[1]
-                    
-                    # Show dialogue if not already visible
-                    if npc_index < len(self.npcs) and not self.dialog.visible:
-                        name, dialogue = self.npcs[npc_index]
-                        if dialogue:  # Only show dialogue if there is one
-                            self.dialog.set_lines([f"{name}: {dialogue}"])
-                    
                     # Track that we're colliding with this NPC
                     self.last_npc_collision = npc_index
             else:
-                # No collision - close dialogue if it was from an NPC collision
+                # No collision - clear last collision tracking
                 if hasattr(self, 'last_npc_collision') and self.last_npc_collision is not None:
-                    if self.dialog.visible:
-                        self.dialog.visible = False
                     self.last_npc_collision = None
             
             # choose facing direction — prefer vertical (up/down) over horizontal like lpc_demo
@@ -430,29 +480,17 @@ class DinnerScene(Scene):
                         self.maria_facing = 'right'
                         self._update_character_animation(self.maria_anim_mgr, 'right', is_moving=False)
                 
-                # Move Shani to meeting position (right side)
+                # Move Shani to meeting position (right side) - straight walk from right
                 if not self.shani_at_meeting:
                     shani_target_x = meeting_x + 30
                     shani_target_y = meeting_y
                     
-                    dx = shani_target_x - self.p2_x
-                    dy = shani_target_y - self.p2_y
-                    distance = math.hypot(dx, dy)
-                    
-                    if distance > 5:
-                        # Shani still moving
-                        nx = dx / distance if distance > 0 else 0
-                        ny = dy / distance if distance > 0 else 0
-                        self.p2_x += nx * self.p2_speed * dt
-                        self.p2_y += ny * self.p2_speed * dt
-                        
-                        # Determine Shani's facing
-                        if abs(dx) > abs(dy):
-                            facing = 'left' if dx < 0 else 'right'
-                        else:
-                            facing = 'up' if dy < 0 else 'down'
-                        self._update_character_animation(self.shani_anim_mgr, facing, is_moving=True)
+                    # Walk straight left to meeting position
+                    if abs(self.p2_x - shani_target_x) > 5:
+                        self.p2_x -= self.p2_speed * dt
+                        self._update_character_animation(self.shani_anim_mgr, 'left', is_moving=True)
                     else:
+                        self.p2_x = shani_target_x
                         self.shani_at_meeting = True
                         self._update_character_animation(self.shani_anim_mgr, 'left', is_moving=False)
                 
@@ -489,11 +527,15 @@ class DinnerScene(Scene):
                     # show 'Maria?' and then kneel -> proposal
                     self.dialog.set_lines([self.p2_dialog_lines[-1]])
                     # after that, open proposal overlay and hide dialogue
+                    self.shani_kneeling = True  # Trigger kneeling animation
                     self.show_proposal = True
                     self.proposal_active = True
                     self.dialog.visible = False
 
         # Keep NPCs emoting - don't clean up emotes, let them continue until the end
+        
+        # Kneeling animation - stay frozen on first frame once kneeling starts
+        # (No animation update needed - kneeling_frame stays at 0)
         
         if self.fireworks_running:
             self.firework_timer -= dt
@@ -501,15 +543,7 @@ class DinnerScene(Scene):
                 f['t'] += dt
             if self.firework_timer <= 0:
                 self.fireworks_running = False
-                # start post-proposal message
-                self.post_message_shown = True
-                self.post_message_timer = 3.0
-
-        # After fireworks + post message, transition back to menu
-        if self.post_message_shown and not self.fireworks_running:
-            self.post_message_timer -= dt
-            if self.post_message_timer <= 0:
-                # go back to menu
+                # Transition back to menu after fireworks
                 try:
                     import importlib
                     mod = importlib.import_module('menu_scene')
@@ -569,15 +603,18 @@ class DinnerScene(Scene):
                     pass
 
     def draw(self, surface: pygame.Surface):
-        # Draw tilemap background if available
+        # Draw tilemap background if available (with vertical offset)
         if self.tilemap_layers:
+            # Create a temporary surface to draw the tilemap, then blit with offset
+            temp_surface = pygame.Surface((1024, 1024), pygame.SRCALPHA)
             for tilemap, layer_data in self.tilemap_layers:
-                tilemap.draw_layer(surface, layer_data, scale=self.tilemap_scale)
+                tilemap.draw_layer(temp_surface, layer_data, scale=self.tilemap_scale)
+            surface.blit(temp_surface, (0, self.background_offset_y))
         else:
             # Fallback: solid color background
             surface.fill((80, 40, 30))
             w, h = surface.get_size()
-            # draw table
+            # draw table (adjusted for -200 offset: 540 - 200 = 340)
             pygame.draw.rect(surface, (160, 120, 80), (200, 340, 880, 160))
 
         # Draw NPCs around table
@@ -608,7 +645,31 @@ class DinnerScene(Scene):
 
         # draw Shani if active
         if self.p2_active:
-            if self.shani_anim_mgr:
+            if self.shani_kneeling and len(self.shani_kneeling_sprites) > 0:
+                # Draw kneeling sprite
+                kneeling_sprite = self.shani_kneeling_sprites[self.kneeling_frame]
+                scaled_sprite = pygame.transform.scale(kneeling_sprite, (128, 128))
+                surface.blit(scaled_sprite, (int(self.p2_x), int(self.p2_y)))
+                
+                # Draw ring in Shani's extended hand (left hand extended forward when kneeling left)
+                ring_x = int(self.p2_x) + 35  # Position in front of Shani
+                ring_y = int(self.p2_y) + 70  # Mid-height where hand would be
+                # Draw ring - gold band with translucent center
+                pygame.draw.circle(surface, (255, 215, 0), (ring_x, ring_y), 8)  # Gold outer circle
+                # Create translucent inner circle
+                inner_circle = pygame.Surface((12, 12), pygame.SRCALPHA)
+                pygame.draw.circle(inner_circle, (0, 0, 0, 100), (6, 6), 5)  # Translucent dark center
+                surface.blit(inner_circle, (ring_x - 6, ring_y - 6))
+                # Diamond on top
+                diamond_points = [
+                    (ring_x, ring_y - 12),  # Top point
+                    (ring_x - 6, ring_y - 6),  # Left
+                    (ring_x, ring_y - 2),  # Bottom
+                    (ring_x + 6, ring_y - 6)  # Right
+                ]
+                pygame.draw.polygon(surface, (230, 230, 255), diamond_points)  # Light blue diamond
+                pygame.draw.polygon(surface, (200, 200, 230), diamond_points, 1)  # Outline
+            elif self.shani_anim_mgr:
                 self.shani_anim_mgr.draw(surface, int(self.p2_x), int(self.p2_y), scale=2.0)
             else:
                 pygame.draw.rect(surface, (120, 170, 240), (int(self.p2_x), int(self.p2_y), 96, 128))  # 2× size
@@ -627,10 +688,16 @@ class DinnerScene(Scene):
             pygame.draw.rect(surface, (255, 0, 255), pygame.Rect(mx + 24, my, 48, 128), 2)
             # Head collision (for NPCs) - green
             pygame.draw.rect(surface, (0, 255, 0), pygame.Rect(mx + 24, my, 48, 40), 2)
+            # Maria's interaction box (5 pixels bigger in every direction) - cyan
+            pygame.draw.rect(surface, (0, 255, 255), pygame.Rect(mx + 24 - 5, my - 5, 48 + 10, 128 + 10), 2)
             
-            # NPC collision boxes
+            # NPC collision boxes (yellow)
             for nx, ny in self.NPC_POSITIONS:
-                pygame.draw.rect(surface, (255, 255, 0), pygame.Rect((nx - 48) + 24, ny - 64, 48, 40), 2)
+                pygame.draw.rect(surface, (255, 255, 0), pygame.Rect(nx - 24, ny - 64, 48, 40), 2)
+            
+            # NPC interaction boxes (blue) - same as collision boxes for NPCs
+            for nx, ny in self.NPC_POSITIONS:
+                pygame.draw.rect(surface, (0, 100, 255), pygame.Rect(nx - 24, ny - 64, 48, 40), 3)
             
             # Shani collision box
             if self.p2_active:
@@ -695,11 +762,6 @@ class DinnerScene(Scene):
                     fy = int(f['y'] + math.sin(ang) * r)
                     pygame.draw.circle(surface, f['color'], (fx, fy), max(2, 6 - int(f['t'])))
 
-        # post-proposal message
-        if self.post_message_shown and not self.fireworks_running:
-            msg = self.font.render("That went well.", True, (255, 240, 220))
-            surface.blit(msg, ((w - msg.get_width()) // 2, 80))
-
     def _check_collision(self, x, y):
         """Check if position collides with environment or other characters.
         Returns: True for environment collision, ('npc', index) for NPC collision, False for no collision
@@ -715,10 +777,10 @@ class DinnerScene(Scene):
                 if body_rect.colliderect(coll_rect):
                     return True
         
-        # NPC collision (head area: 48x40)
+        # NPC collision - same size as interaction boxes (48x40, centered on sprite)
+        # NPCs are drawn at (nx-48, ny-64), so collision box is centered at nx-24
         for i, (nx, ny) in enumerate(self.NPC_POSITIONS):
-            # NPCs drawn at (nx-48, ny-64), collision box at top
-            npc_rect = pygame.Rect((nx - 48) + 24, ny - 64, 48, 40)
+            npc_rect = pygame.Rect(nx - 24, ny - 64, 48, 40)
             if maria_rect.colliderect(npc_rect):
                 return ('npc', i)
         

@@ -62,6 +62,16 @@ def main():
     manager = SceneManager()
     manager.go_to(MenuScene(manager))
 
+    # Scene shortcuts (label, module, class)
+    scene_shortcuts = [
+        ("bumble_scene", "BumbleScene"),
+        ("drive_scene", "DriveScene"),
+        ("apartment_scene", "ApartmentScene"),
+        ("disney_scene", "DisneyScene"),
+        ("moving_scene", "MovingScene"),
+        ("dinner_scene", "DinnerScene"),
+    ]
+    
     running = True
     while running:
         dt = clock.tick(60) / 1000.0
@@ -70,6 +80,18 @@ def main():
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 running = False
+            elif event.type == pygame.KEYDOWN and pygame.K_1 <= event.key <= pygame.K_9:
+                # Global scene shortcuts - pressing 1-8 at any time jumps to that scene
+                idx = event.key - pygame.K_1
+                if 0 <= idx < len(scene_shortcuts):
+                    module_name, class_name = scene_shortcuts[idx]
+                    try:
+                        import importlib
+                        mod = importlib.import_module(module_name)
+                        cls = getattr(mod, class_name)
+                        manager.go_to(cls(manager))
+                    except Exception as e:
+                        print(f"Failed to load {module_name}.{class_name}: {e}")
             else:
                 manager.handle_event(event)
 

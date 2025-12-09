@@ -66,6 +66,7 @@ class ApartmentScene(Scene):
         # Interaction counters for wine glasses
         self.wine_glass1_interactions = 0
         self.wine_glass2_interactions = 0
+        self.box_interactions = 0
         
         # Game interaction state
         self.game_interaction_active = False
@@ -312,6 +313,10 @@ class ApartmentScene(Scene):
                             print(f"Dialogue finished! Starting character movement. maria_target={self.maria_target_pos}, shani_target={self.shani_target_pos}")
                     return
                 
+                # Don't allow object interactions while the game is active
+                if self.show_game_overlay:
+                    return
+                
                 # Check if near any table objects (expand interaction area vertically only)
                 # Use inflated rect to check proximity - width 48px (Maria's width), expand vertically 60px
                 maria_rect = pygame.Rect(self.player_pos[0] + 40, self.player_pos[1], 48, 128)
@@ -326,23 +331,40 @@ class ApartmentScene(Scene):
                 
                 # Check box FIRST (game on table) - leftmost object
                 if maria_interact_rect.colliderect(self.box_rect):
-                    # Trigger both Maria and Shani to sit at the table
-                    if not self.game_interaction_active:
-                        self.game_interaction_active = True
-                        # Position Shani at specific chair location (right side)
-                        # 700 - 200 offset = 500
-                        self.shani_target_pos = [480, 500]
-                        # Position Maria at her chair location (left side)
-                        self.maria_target_pos = [350, 500]
-                        if DEBUG:
-                            print(f"Game interaction activated! Targets set: Maria={self.maria_target_pos}, Shani={self.shani_target_pos}")
-                    
-                    self.dialog.set_lines([
-                        "Oh, a board game!",
-                        "I wonder if Shani would like to play..."
-                    ])
-                    self.interacting = True
-                    self.current_interaction = 'box'
+                    # First interaction: just show the title
+                    if self.box_interactions == 0:
+                        self.box_interactions += 1
+                        self.dialog.set_lines([
+                            "Card Game: We are not really strangers"
+                        ])
+                        self.interacting = True
+                        self.current_interaction = 'box'
+                    # After seeing title, need to drink wine first
+                    elif self.wine_glass1_interactions == 0 and self.wine_glass2_interactions == 0:
+                        self.dialog.set_lines([
+                            "Maybe I should try the wine first..."
+                        ])
+                        self.interacting = True
+                        self.current_interaction = 'box'
+                    # After drinking wine, clicking game again starts it
+                    else:
+                        # Trigger both Maria and Shani to sit at the table
+                        if not self.game_interaction_active:
+                            self.game_interaction_active = True
+                            # Position Shani at specific chair location (right side)
+                            # 700 - 200 offset = 500
+                            self.shani_target_pos = [480, 500]
+                            # Position Maria at her chair location (left side)
+                            self.maria_target_pos = [350, 500]
+                            if DEBUG:
+                                print(f"Game interaction activated! Targets set: Maria={self.maria_target_pos}, Shani={self.shani_target_pos}")
+                        
+                        self.dialog.set_lines([
+                            "Oh, a board game!",
+                            "I wonder if Shani would like to play..."
+                        ])
+                        self.interacting = True
+                        self.current_interaction = 'box'
                 
                 # Check wine bottle
                 elif maria_interact_rect.colliderect(self.wine_bottle_rect):
@@ -688,10 +710,12 @@ class ApartmentScene(Scene):
             self.fade_alpha += dt * 150  # Fade over ~1.7 seconds
             if self.fade_alpha >= 255:
                 self.fade_alpha = 255
-                # Transition to next scene
+                # Transition to transition scene with message
                 if self.manager:
-                    from dinner_scene import DinnerScene
-                    self.manager.go_to(DinnerScene(self.manager))
+                    from transition_scene import TransitionScene
+                    from disney_scene import DisneyScene
+                    message = "After their first date Shani and Maria went out on many more dates..."
+                    self.manager.go_to(TransitionScene(message, DisneyScene, self.manager, duration=5.0))
 
     def draw(self, surface: pygame.Surface):
         surface.fill((20, 20, 30))
@@ -780,24 +804,30 @@ class ApartmentScene(Scene):
         if self.show_game_overlay and self.current_question < len(self.questions):
             w, h = surface.get_size()
             box = pygame.Rect((w - 520)//2, (h - 220)//2, 520, 220)
-            pygame.draw.rect(surface, (240, 240, 250), box)
-            pygame.draw.rect(surface, (30, 30, 30), box, 2)
+            
+            # Red background
+            pygame.draw.rect(surface, (180, 40, 40), box)
+            
+            # Dark border
+            pygame.draw.rect(surface, (80, 20, 20), box, 4)
             
             # Get current question
             current_q = self.questions[self.current_question]
-            title = self.font.render(current_q['question'], True, (10, 10, 10))
+            title = self.font.render(current_q['question'], True, (255, 240, 230))
             surface.blit(title, (box.x + (box.w - title.get_width())//2, box.y + 24))
 
-            # Option 1 button (always correct answer)
+            # Option 1 button (always correct answer) - white background with red text
             option1_rect = pygame.Rect(box.x + 60, box.y + 140, 160, 48)
-            pygame.draw.rect(surface, (100, 140, 180), option1_rect)
-            opt1txt = self.font.render(current_q['option1'], True, (255, 255, 255))
+            pygame.draw.rect(surface, (255, 255, 255), option1_rect)
+            pygame.draw.rect(surface, (80, 20, 20), option1_rect, 2)
+            opt1txt = self.font.render(current_q['option1'], True, (180, 40, 40))
             surface.blit(opt1txt, (option1_rect.x + (option1_rect.w - opt1txt.get_width())//2, option1_rect.y + 12))
 
-            # Option 2 button
+            # Option 2 button - white background with red text
             option2_rect = pygame.Rect(box.x + 300, box.y + 140, 160, 48)
-            pygame.draw.rect(surface, (100, 140, 180), option2_rect)
-            opt2txt = self.font.render(current_q['option2'], True, (255, 255, 255))
+            pygame.draw.rect(surface, (255, 255, 255), option2_rect)
+            pygame.draw.rect(surface, (80, 20, 20), option2_rect, 2)
+            opt2txt = self.font.render(current_q['option2'], True, (180, 40, 40))
             surface.blit(opt2txt, (option2_rect.x + (option2_rect.w - opt2txt.get_width())//2, option2_rect.y + 12))
         
         # Draw fireworks particles
