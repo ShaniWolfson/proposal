@@ -8,7 +8,7 @@ class DisneyScene(Scene):
     """Disney World scene: characters kiss at castle with fireworks."""
 
     # Constants
-    TIMER_DURATION = 10.0
+    TIMER_DURATION = 13.0
     HEART_DELAY = 5.0
     HEART_GROW_SPEED = 0.8
     HEART_BASE_SIZE = 350
@@ -237,10 +237,10 @@ class DisneyScene(Scene):
         from transition_scene import TransitionScene
         from moving_scene import MovingScene
         next_scene = TransitionScene(
-            "And then we decided to move in together! Time to get the UHaul!",
+            "And then we decided to move in together!\nTime to get the UHaul!",
             MovingScene,
             self.manager,
-            duration=10.0
+            duration=7.0
         )
         self.manager.go_to(next_scene)
 
@@ -282,7 +282,7 @@ class DisneyScene(Scene):
         castle_width = int(w * 1.2)
         castle_height = int(self.castle_image.get_height() * (castle_width / self.castle_image.get_width()))
         scaled_castle = pygame.transform.scale(self.castle_image, (castle_width, castle_height))
-        castle_x = (w - castle_width) // 2
+        castle_x = (w - castle_width) // 2 - 3
         castle_y = h - 150 - castle_height + 320
         surface.blit(scaled_castle, (castle_x, castle_y))
 

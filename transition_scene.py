@@ -61,10 +61,16 @@ class TransitionScene(Scene):
         surface.fill((20, 20, 30))
         w, h = surface.get_size()
         
-        # Draw message centered (with typewriter effect)
-        text = self.font.render(self.displayed_message, True, (255, 240, 230))
-        text_rect = text.get_rect(center=(w // 2, h // 2))
-        surface.blit(text, text_rect)
+        # Draw message centered (with typewriter effect) - handle multi-line text
+        lines = self.displayed_message.split('\n')
+        line_height = self.font.get_linesize()
+        total_height = line_height * len(lines)
+        start_y = (h - total_height) // 2
+        
+        for i, line in enumerate(lines):
+            text = self.font.render(line, True, (255, 240, 230))
+            text_rect = text.get_rect(center=(w // 2, start_y + i * line_height))
+            surface.blit(text, text_rect)
         
         # Draw fade in overlay
         if self.fade_in_alpha > 0:
