@@ -22,6 +22,7 @@ class ApartmentScene(Scene):
     
     def __init__(self, manager=None):
         super().__init__(manager)
+        self.music_file = "art/music/apartment/first_date.mp3"  # Set your music file here
         self.font = None
         self.dialog = None
         
@@ -105,6 +106,7 @@ class ApartmentScene(Scene):
         ]
 
     def start(self):
+        super().start()  # Call parent to handle music
         self.font = pygame.font.SysFont(None, 28)
         self.dialog = DialogueBox(self.font, 760, 120)
         
@@ -713,7 +715,7 @@ class ApartmentScene(Scene):
                     from .transition_scene import TransitionScene
                     from .disney_scene import DisneyScene
                     message = "After their first date Shani and Maria went out on many more dates..."
-                    self.manager.go_to(TransitionScene(message, DisneyScene, self.manager, duration=5.0))
+                    self.manager.go_to(TransitionScene(message, DisneyScene, self.manager, duration=5.0, music_file=self.music_file))
 
     def draw(self, surface: pygame.Surface):
         surface.fill((20, 20, 30))

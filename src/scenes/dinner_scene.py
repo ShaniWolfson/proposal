@@ -247,6 +247,7 @@ class DinnerScene(Scene):
                     pass
 
     def start(self):
+        super().start()  # Call parent to handle music
         self.font = pygame.font.SysFont(None, 28)
         self.dialog = DialogueBox(self.font, 760, 120)
         

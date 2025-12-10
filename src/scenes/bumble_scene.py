@@ -8,6 +8,7 @@ class BumbleScene(Scene):
 
     def __init__(self, manager=None):
         super().__init__(manager)
+        self.music_file = "art/music/bumble/swipe.mp3"  # Set your music file here
         # Four profiles before Shani - can only reject these
         self.profiles = [
             {
@@ -66,6 +67,7 @@ class BumbleScene(Scene):
         self.heart_spawn_timer = 0.0
 
     def start(self):
+        super().start()  # Call parent to handle music
         self.font = pygame.font.SysFont(None, 36)
         self.index = 0
         self.matched = False

@@ -22,27 +22,33 @@ class Scene:
         self.music_file = None  # Override in subclass to set music
 
     def start(self):
-        # Play scene music if specified
+        # Play scene music if specified and not already playing
         if self.music_file:
-            self._play_music(self.music_file)
+            # Check if this music is already playing (via scene manager)
+            if hasattr(self.manager, 'current_music_file') and self.manager.current_music_file == self.music_file:
+                # Music is already playing, don't restart it
+                pass
+            else:
+                self._play_music(self.music_file)
 
     def end(self):
-        # Stop music when scene ends
-        if self.music_file:
-            pygame.mixer.music.stop()
+        # Fade out music when scene ends
+        if self.music_file and pygame.mixer.music.get_busy():
+            pygame.mixer.music.fadeout(1000)  # Fade out over 1 second
     
-    def _play_music(self, music_path: str, volume: float = 0.5, loops: int = -1):
+    def _play_music(self, music_path: str, volume: float = 0.5, loops: int = -1, fade_ms: int = 1000):
         """Play background music for this scene.
         
         Args:
             music_path: Path to music file (mp3, ogg, etc.)
             volume: Volume level (0.0 to 1.0)
             loops: Number of times to loop (-1 for infinite)
+            fade_ms: Fade in duration in milliseconds (default 1000ms = 1 second)
         """
         try:
             pygame.mixer.music.load(music_path)
             pygame.mixer.music.set_volume(volume)
-            pygame.mixer.music.play(loops)
+            pygame.mixer.music.play(loops, fade_ms=fade_ms)
         except Exception as e:
             print(f"Failed to load music {music_path}: {e}")
 
@@ -61,17 +67,32 @@ class SceneManager:
 
     def __init__(self):
         self.scene: Optional[Scene] = None
+        self.current_music_file: Optional[str] = None
 
     def go_to(self, scene: Scene):
+        # Check if new scene has same music as currently playing
+        next_music = getattr(scene, 'music_file', None)
+        same_music = (self.current_music_file is not None and 
+                     next_music is not None and
+                     self.current_music_file == next_music)
+        
         if self.scene is not None:
             try:
-                self.scene.end()
+                # Only end (fade out) if next scene has different music
+                if not same_music:
+                    self.scene.end()
+                    self.current_music_file = None
             except Exception:
                 pass
+        
         self.scene = scene
         self.scene.manager = self
         try:
+            # Always call start() for scene initialization
             self.scene.start()
+            # Track current music file
+            if next_music:
+                self.current_music_file = next_music
         except Exception:
             pass
 

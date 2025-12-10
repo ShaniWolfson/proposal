@@ -5,8 +5,9 @@ from ..core.scene import Scene
 class TransitionScene(Scene):
     """Simple transition scene that displays a message before moving to the next scene."""
 
-    def __init__(self, message, next_scene_class, manager=None, duration=4.0):
+    def __init__(self, message, next_scene_class, manager=None, duration=4.0, music_file=None):
         super().__init__(manager)
+        self.music_file = music_file  # Set music file to continue from previous scene
         self.message = message
         self.next_scene_class = next_scene_class
         self.duration = duration
@@ -21,6 +22,7 @@ class TransitionScene(Scene):
         self.type_speed = 15  # characters per second
         
     def start(self):
+        super().start()  # Call parent to handle music
         self.font = pygame.font.SysFont(None, 42)
         self.timer = 0
         self.fade_in_alpha = 255

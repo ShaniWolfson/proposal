@@ -59,6 +59,12 @@ def main():
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption("Our Adventure — Prototype")
     clock = pygame.time.Clock()
+    
+    # Initialize audio mixer for music support
+    try:
+        pygame.mixer.init()
+    except Exception as e:
+        print(f"Warning: Could not initialize audio mixer: {e}")
 
     manager = SceneManager()
     # Start with Bumble splash screen instead of menu

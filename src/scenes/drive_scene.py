@@ -18,6 +18,7 @@ class DriveScene(Scene):
 
     def __init__(self, vehicle='car', duration=35.0, time_of_day='night', manager=None):
         super().__init__(manager)
+        self.music_file = "art/music/drive/driving.mp3"  # Set your music file here
         self.vehicle = vehicle
         self.duration = duration
         self.time_of_day = time_of_day
@@ -80,6 +81,7 @@ class DriveScene(Scene):
         self.fade_alpha = 0
 
     def start(self):
+        super().start()  # Call parent to handle music
         self.font = pygame.font.SysFont(None, 28)
         self.timer = self.duration
         self.crashed = False

@@ -68,6 +68,7 @@ class DisneyScene(Scene):
 
     def __init__(self, manager=None):
         super().__init__(manager)
+        self.music_file = "art/music/apartment/first_date.mp3"  # Continue apartment music
         self.font = None
         self.timer = self.TIMER_DURATION
         self.kissed = False
@@ -90,6 +91,7 @@ class DisneyScene(Scene):
 
     def start(self):
         """Initialize scene resources and state."""
+        super().start()  # Call parent to handle music
         self.font = pygame.font.SysFont(None, 36)
         self._reset_state()
         self._initialize_stars()
