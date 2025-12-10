@@ -256,7 +256,7 @@ class DinnerScene(Scene):
         
         # Load tilemap background
         try:
-            dinner_folder = os.path.join('art', 'backgrounds', 'dinner')
+            dinner_folder = os.path.join('art', 'scenes', 'dinner', 'dinner')
             self.tilemap_layers = load_dinner_tilemap(dinner_folder)
             # Game is now 1024x1024, tilemap is 16x16 tiles at 16px
             # Scale: 1024 / 256 = 4x (16px tiles → 64px display tiles)

@@ -108,7 +108,7 @@ class ApartmentScene(Scene):
         self.font = pygame.font.SysFont(None, 28)
         self.dialog = DialogueBox(self.font, 760, 120)
         
-        apartment_folder = os.path.join('art', 'backgrounds', 'apartment')
+        apartment_folder = os.path.join('art', 'scenes', 'apartment', 'apartment')
         try:
             # Load and scale background image (256x256 -> 1024x1024 to fill screen width, then offset)
             bg_path = os.path.join(apartment_folder, 'untitled.png')

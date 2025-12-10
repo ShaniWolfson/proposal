@@ -120,12 +120,12 @@ class DisneyScene(Scene):
     def _load_assets(self):
         """Load all image assets."""
         try:
-            self.castle_image = pygame.image.load("art/backgrounds/castle.png").convert_alpha()
+            self.castle_image = pygame.image.load("art/scenes/disney/castle.png").convert_alpha()
         except Exception as e:
             print(f"Failed to load castle image: {e}")
         
         try:
-            self.heart_image = pygame.image.load("art/backgrounds/heart.png").convert_alpha()
+            self.heart_image = pygame.image.load("art/scenes/bumble/heart.png").convert_alpha()
         except Exception as e:
             print(f"Failed to load heart image: {e}")
         

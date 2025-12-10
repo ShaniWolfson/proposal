@@ -18,7 +18,7 @@ class BumbleSplashScene(Scene):
     def start(self):
         try:
             # Load without convert to preserve quality
-            self.image = pygame.image.load("art/backgrounds/Bumble_home.jpg")
+            self.image = pygame.image.load("art/scenes/bumble/Bumble_home.jpg")
         except Exception as e:
             print(f"Failed to load Bumble_home.jpg: {e}")
             # If image fails to load, skip to Bumble scene immediately

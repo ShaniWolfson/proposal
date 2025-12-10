@@ -89,14 +89,14 @@ class DriveScene(Scene):
         
         # Load the road background based on time of day
         if self.time_of_day == 'day':
-            road_path = os.path.join('art', 'backgrounds', 'date_drive', 'dayroad.png')
+            road_path = os.path.join('art', 'scenes', 'drive', 'date_drive', 'dayroad.png')
         else:
-            road_path = os.path.join('art', 'backgrounds', 'date_drive', 'nightroad.png')
+            road_path = os.path.join('art', 'scenes', 'drive', 'date_drive', 'nightroad.png')
         self.road_bg = pygame.image.load(road_path).convert_alpha()
         
         # Load car sprites using the car_sprites loader
         from car_sprites import load_car_sprites
-        vehicles_path = os.path.join('art', 'backgrounds', 'date_drive', "'90s vehicles.png")
+        vehicles_path = os.path.join('art', 'scenes', 'drive', 'date_drive', "'90s vehicles.png")
         
         # Load all car sprites
         self.all_cars = load_car_sprites(vehicles_path, expected_cols=4, 
@@ -330,14 +330,9 @@ class DriveScene(Scene):
             if self.fade_alpha >= 255:
                 self.fade_alpha = 255
                 # Transition to apartment scene
-                try:
-                    mod = importlib.import_module('apartment_scene')
-                    cls = getattr(mod, 'ApartmentScene')
-                    if self.manager:
-                        self.manager.go_to(cls(self.manager))
-                except Exception:
-                    # fallback: do nothing
-                    pass
+                if self.manager:
+                    from apartment_scene import ApartmentScene
+                    self.manager.go_to(ApartmentScene(self.manager))
 
     def draw(self, surface: pygame.Surface):
         surface.fill((0, 0, 0))

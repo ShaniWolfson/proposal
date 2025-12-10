@@ -73,7 +73,7 @@ class BumbleScene(Scene):
         
         # Load heart image
         try:
-            self.heart_image = pygame.image.load("art/backgrounds/red_heart.png").convert_alpha()
+            self.heart_image = pygame.image.load("art/scenes/bumble/red_heart.png").convert_alpha()
             # Scale heart to reasonable size
             self.heart_image = pygame.transform.scale(self.heart_image, (40, 40))
         except Exception as e:
@@ -308,6 +308,6 @@ class BumbleScene(Scene):
                     surface.blit(scaled_heart, rect)
             
             m = pygame.font.SysFont(None, 48).render("It's a match!", True, (255, 50, 120))
-            surface.blit(m, ((w - m.get_width()) // 2, box.y - 64))
+            surface.blit(m, ((w - m.get_width()) // 2, box.y + 6))
 
 
