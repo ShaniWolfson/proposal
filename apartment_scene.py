@@ -791,10 +791,6 @@ class ApartmentScene(Scene):
             shani_rect = pygame.Rect(self.shani_pos[0] + 40, self.shani_pos[1], 48, 40)
             pygame.draw.rect(surface, (255, 255, 0), shani_rect, 2)  # Yellow for Shani
         
-        # Draw title
-        title = self.font.render("First Date — Your UWS Apartment", True, (240, 240, 240))
-        surface.blit(title, (20, 20))
-        
         # Draw dialog
         if self.dialog and (self.interacting or self.cutscene_step == 2):
             w, h = surface.get_size()

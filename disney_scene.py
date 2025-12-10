@@ -259,7 +259,6 @@ class DisneyScene(Scene):
         self._draw_characters(surface, w, char_y)
         
         # Draw UI
-        self._draw_title(surface)
         self._draw_hint_or_effects(surface, w, h, char_y)
 
     def _draw_stars(self, surface):
