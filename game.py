@@ -156,7 +156,6 @@ def main():
         return 1
     finally:
         game.shutdown()
-    
     return 0
 
 

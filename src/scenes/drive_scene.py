@@ -2,7 +2,8 @@ import pygame
 import random
 import importlib
 import os
-from scene import Scene
+from ..core.scene import Scene
+from ..utils.car_sprites import load_car_sprites
 
 
 class DriveScene(Scene):
@@ -95,7 +96,6 @@ class DriveScene(Scene):
         self.road_bg = pygame.image.load(road_path).convert_alpha()
         
         # Load car sprites using the car_sprites loader
-        from car_sprites import load_car_sprites
         vehicles_path = os.path.join('art', 'scenes', 'drive', 'date_drive', "'90s vehicles.png")
         
         # Load all car sprites
@@ -331,7 +331,7 @@ class DriveScene(Scene):
                 self.fade_alpha = 255
                 # Transition to apartment scene
                 if self.manager:
-                    from apartment_scene import ApartmentScene
+                    from .apartment_scene import ApartmentScene
                     self.manager.go_to(ApartmentScene(self.manager))
 
     def draw(self, surface: pygame.Surface):

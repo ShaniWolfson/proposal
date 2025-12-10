@@ -1,9 +1,10 @@
 import pygame
 import sys
-from scene import SceneManager, Scene
-from player import Player
-from menu_scene import MenuScene
-import assets
+sys.path.insert(0, 'src')
+from src.core.scene import SceneManager, Scene
+from src.core.player import Player
+from src.scenes.menu_scene import MenuScene
+from src.core import assets
 
 
 # Screen dimensions - reduced height to prevent cutoff
@@ -61,7 +62,7 @@ def main():
 
     manager = SceneManager()
     # Start with Bumble splash screen instead of menu
-    from bumble_splash_scene import BumbleSplashScene
+    from src.scenes.bumble_splash_scene import BumbleSplashScene
     manager.go_to(BumbleSplashScene(manager))
 
     # Scene shortcuts (label, module, class)
@@ -92,7 +93,7 @@ def main():
                     module_name, class_name = scene_shortcuts[idx]
                     try:
                         import importlib
-                        mod = importlib.import_module(module_name)
+                        mod = importlib.import_module(f"src.scenes.{module_name}")
                         cls = getattr(mod, class_name)
                         manager.go_to(cls(manager))
                     except Exception as e:

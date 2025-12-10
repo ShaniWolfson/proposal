@@ -1,7 +1,7 @@
 import pygame
 import random
 import math
-from scene import Scene
+from ..core.scene import Scene
 
 
 class DisneyScene(Scene):
@@ -234,8 +234,8 @@ class DisneyScene(Scene):
 
     def _transition_to_moving_scene(self):
         """Transition to the moving in together scene."""
-        from transition_scene import TransitionScene
-        from moving_scene import MovingScene
+        from .transition_scene import TransitionScene
+        from .moving_scene import MovingScene
         next_scene = TransitionScene(
             "And then we decided to move in together!\nTime to get the UHaul!",
             MovingScene,

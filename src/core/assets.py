@@ -2,7 +2,8 @@ import os
 import pygame
 from typing import Dict, Tuple
 
-ROOT = os.path.dirname(__file__)
+# Get the project root (two levels up from src/core/)
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 ART_DIR = os.path.join(ROOT, 'art')
 
 # containers

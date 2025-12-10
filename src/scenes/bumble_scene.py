@@ -1,8 +1,6 @@
 import pygame
 import random
-from scene import Scene
-from transition_scene import TransitionScene
-from drive_scene import DriveScene
+from ..core.scene import Scene
 
 
 class BumbleScene(Scene):
@@ -145,6 +143,8 @@ class BumbleScene(Scene):
             # Transition to next scene
             self.transition_timer -= dt
             if self.transition_timer <= 0 and self.manager:
+                from .transition_scene import TransitionScene
+                from .drive_scene import DriveScene
                 next_scene_factory = lambda m: DriveScene('car', 15.0, 'night', m)
                 self.manager.go_to(TransitionScene(
                     "It's time to drive to the city\nfor your first date with Shani!",

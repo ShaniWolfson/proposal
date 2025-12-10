@@ -1,5 +1,5 @@
 import pygame
-from scene import Scene
+from ..core.scene import Scene
 
 
 class TransitionScene(Scene):

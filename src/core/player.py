@@ -1,5 +1,5 @@
 import pygame
-import assets
+from . import assets
 
 
 class Player(pygame.sprite.Sprite):

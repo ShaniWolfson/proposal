@@ -2,11 +2,11 @@ import pygame
 import math
 import os
 import random
-from scene import Scene
-from dialogue import DialogueBox
-import assets
-from tilemap import load_apartment_tilemap, load_apartment_collision_map, load_apartment_object_rects
-from lpc_demo import AnimationManager, IDLE_SPEED, WALK_SPEED
+from ..core.scene import Scene
+from ..core.dialogue import DialogueBox
+from ..core import assets
+from ..utils.tilemap import load_apartment_tilemap, load_apartment_collision_map, load_apartment_object_rects
+from ..utils.lpc_demo import AnimationManager, IDLE_SPEED, WALK_SPEED, Animation, SIT_SPEED
 
 # Debug flag - set to True to enable debug output and see collision boxes
 DEBUG = False
@@ -174,8 +174,6 @@ class ApartmentScene(Scene):
     
     def _setup_character(self, char_name, initial_anim_priority):
         """Load and setup a character's animation manager."""
-        from lpc_demo import Animation, SIT_SPEED
-        
         try:
             anims = assets.get_animations(char_name, size=(64, 64))
         except Exception as e:
@@ -712,8 +710,8 @@ class ApartmentScene(Scene):
                 self.fade_alpha = 255
                 # Transition to transition scene with message
                 if self.manager:
-                    from transition_scene import TransitionScene
-                    from disney_scene import DisneyScene
+                    from .transition_scene import TransitionScene
+                    from .disney_scene import DisneyScene
                     message = "After their first date Shani and Maria went out on many more dates..."
                     self.manager.go_to(TransitionScene(message, DisneyScene, self.manager, duration=5.0))
 

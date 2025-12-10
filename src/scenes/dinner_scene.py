@@ -1,10 +1,11 @@
 import pygame
 import math
 import os
-from scene import Scene
-from dialogue import DialogueBox
-import assets
-from tilemap import load_dinner_tilemap, load_collision_map
+from ..core.scene import Scene
+from ..core.dialogue import DialogueBox
+from ..core import assets
+from ..utils.tilemap import load_dinner_tilemap, load_collision_map
+from ..utils.lpc_demo import Animation, AnimationManager, IDLE_SPEED, WALK_SPEED, SIT_SPEED
 
 # Debug flag - set to True to enable debug output and see collision boxes
 DEBUG = False
@@ -97,11 +98,6 @@ class DinnerScene(Scene):
         Returns:
             AnimationManager instance or None
         """
-        try:
-            from lpc_demo import Animation, AnimationManager, IDLE_SPEED, WALK_SPEED, SIT_SPEED
-        except Exception:
-            return None
-        
         try:
             anims = assets.get_animations(char_name, size=(48, 64))
             if not anims:

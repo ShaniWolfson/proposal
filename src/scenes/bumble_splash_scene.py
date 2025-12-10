@@ -1,5 +1,6 @@
 import pygame
-from scene import Scene
+from ..core.scene import Scene
+from .bumble_scene import BumbleScene
 
 
 class BumbleSplashScene(Scene):
@@ -23,7 +24,6 @@ class BumbleSplashScene(Scene):
             print(f"Failed to load Bumble_home.jpg: {e}")
             # If image fails to load, skip to Bumble scene immediately
             if self.manager:
-                from bumble_scene import BumbleScene
                 self.manager.go_to(BumbleScene(self.manager))
     
     def handle_event(self, event: pygame.event.EventType):
@@ -54,7 +54,6 @@ class BumbleSplashScene(Scene):
     
     def _transition_to_bumble(self):
         if self.manager:
-            from bumble_scene import BumbleScene
             self.manager.go_to(BumbleScene(self.manager))
     
     def draw(self, surface: pygame.Surface):

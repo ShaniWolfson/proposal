@@ -1,7 +1,7 @@
 import pygame
 import importlib
-from scene import Scene
-from drive_scene import DriveScene
+from ..core.scene import Scene
+from .drive_scene import DriveScene
 
 
 class MovingScene(DriveScene):
@@ -13,8 +13,8 @@ class MovingScene(DriveScene):
         super().update(dt)
         # when finished, transition to meet the parents
         if self.timer <= 0:
-            from transition_scene import TransitionScene
-            from dinner_scene import DinnerScene
+            from .transition_scene import TransitionScene
+            from .dinner_scene import DinnerScene
             next_scene = TransitionScene(
                 "Time to meet the parents!",
                 DinnerScene,
