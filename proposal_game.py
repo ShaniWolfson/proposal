@@ -67,9 +67,9 @@ def main():
         print(f"Warning: Could not initialize audio mixer: {e}")
 
     manager = SceneManager()
-    # Start with Bumble splash screen instead of menu
-    from src.scenes.bumble_splash_scene import BumbleSplashScene
-    manager.go_to(BumbleSplashScene(manager))
+    # Start with intro scene
+    from src.scenes.intro_scene import IntroScene
+    manager.go_to(IntroScene(manager))
 
     # Scene shortcuts (label, module, class)
     scene_shortcuts = [

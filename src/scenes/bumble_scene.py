@@ -38,15 +38,15 @@ class BumbleScene(Scene):
                 "hobbies": "Critiquing everyone's life choices, perfecting my ring light setup, #livingmybestlife",
                 "match": False
             },
-            {
-                "name": "Chaotic Casey",
-                "age": "26",
-                "character": "maria",
-                "occupation": "Professional Chaos Creator & Amateur Arsonist",
-                "looking_for": "Someone with good insurance. I can't promise I won't accidentally set you on fire",
-                "hobbies": "Starting drama, pulling fire alarms, getting banned from public spaces",
-                "match": False
-            },
+            # {
+            #     "name": "Chaotic Casey",
+            #     "age": "26",
+            #     "character": "maria",
+            #     "occupation": "Professional Chaos Creator & Amateur Arsonist",
+            #     "looking_for": "Someone with good insurance. I can't promise I won't accidentally set you on fire",
+            #     "hobbies": "Starting drama, pulling fire alarms, getting banned from public spaces",
+            #     "match": False
+            # },
             {
                 "name": "Shani",
                 "age": "27",
