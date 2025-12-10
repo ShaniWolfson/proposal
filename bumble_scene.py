@@ -145,7 +145,7 @@ class BumbleScene(Scene):
             if self.transition_timer <= 0 and self.manager:
                 from transition_scene import TransitionScene
                 from drive_scene import DriveScene
-                next_scene_factory = lambda m: DriveScene('car', 10.0, 'night', m)
+                next_scene_factory = lambda m: DriveScene('car', 15.0, 'night', m)
                 self.manager.go_to(TransitionScene(
                     "It's time to drive to the city\nfor your first date with Shani!",
                     next_scene_factory,

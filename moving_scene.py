@@ -6,7 +6,7 @@ from drive_scene import DriveScene
 
 class MovingScene(DriveScene):
     """Alias for UHaulDriveScene to match the transition scene import."""
-    def __init__(self, manager=None, duration=35.0):
+    def __init__(self, manager=None, duration=15.0):
         super().__init__('uhaul', duration, 'day', manager)
 
     def update(self, dt: float):
