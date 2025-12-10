@@ -60,7 +60,9 @@ def main():
     clock = pygame.time.Clock()
 
     manager = SceneManager()
-    manager.go_to(MenuScene(manager))
+    # Start with Bumble splash screen instead of menu
+    from bumble_splash_scene import BumbleSplashScene
+    manager.go_to(BumbleSplashScene(manager))
 
     # Scene shortcuts (label, module, class)
     scene_shortcuts = [
@@ -80,6 +82,9 @@ def main():
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 running = False
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_m:
+                # Press M to open menu
+                manager.go_to(MenuScene(manager))
             elif event.type == pygame.KEYDOWN and pygame.K_1 <= event.key <= pygame.K_9:
                 # Global scene shortcuts - pressing 1-8 at any time jumps to that scene
                 idx = event.key - pygame.K_1
