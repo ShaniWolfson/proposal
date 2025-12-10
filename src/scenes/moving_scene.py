@@ -2,8 +2,8 @@ import pygame
 import importlib
 from scene import Scene
 from drive_scene import DriveScene
-from transition_scene import TransitionScene
-from dinner_scene import DinnerScene
+
+
 class MovingScene(DriveScene):
     """Alias for UHaulDriveScene to match the transition scene import."""
     def __init__(self, manager=None, duration=15.0):
@@ -13,6 +13,8 @@ class MovingScene(DriveScene):
         super().update(dt)
         # when finished, transition to meet the parents
         if self.timer <= 0:
+            from transition_scene import TransitionScene
+            from dinner_scene import DinnerScene
             next_scene = TransitionScene(
                 "Time to meet the parents!",
                 DinnerScene,
@@ -21,6 +23,8 @@ class MovingScene(DriveScene):
             )
             if self.manager:
                 self.manager.go_to(next_scene)
+
+
 class UHaulDriveScene(DriveScene):
     def __init__(self, manager=None, duration=35.0):
         super().__init__('uhaul', duration, 'day', manager)

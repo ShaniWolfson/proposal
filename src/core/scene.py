@@ -11,16 +11,40 @@ class Scene:
     - handle_event(event): called for each pygame event
     - update(dt): called each frame with delta seconds
     - draw(surface): render the scene to the given surface
+    
+    Music support:
+    - Set music_file attribute to enable background music
+    - Music will automatically play when scene starts and stop when it ends
     """
 
     def __init__(self, manager: Optional[object] = None):
         self.manager = manager
+        self.music_file = None  # Override in subclass to set music
 
     def start(self):
-        pass
+        # Play scene music if specified
+        if self.music_file:
+            self._play_music(self.music_file)
 
     def end(self):
-        pass
+        # Stop music when scene ends
+        if self.music_file:
+            pygame.mixer.music.stop()
+    
+    def _play_music(self, music_path: str, volume: float = 0.5, loops: int = -1):
+        """Play background music for this scene.
+        
+        Args:
+            music_path: Path to music file (mp3, ogg, etc.)
+            volume: Volume level (0.0 to 1.0)
+            loops: Number of times to loop (-1 for infinite)
+        """
+        try:
+            pygame.mixer.music.load(music_path)
+            pygame.mixer.music.set_volume(volume)
+            pygame.mixer.music.play(loops)
+        except Exception as e:
+            print(f"Failed to load music {music_path}: {e}")
 
     def handle_event(self, event: pygame.event.EventType):
         pass
