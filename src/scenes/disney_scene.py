@@ -88,6 +88,10 @@ class DisneyScene(Scene):
         self.hint_fade_direction = 1
         self.star_alphas = {}
         self.kiss_animation_progress = 0
+        
+        # Photo montage
+        self.photos = []
+        self.photo_data = []
 
     def start(self):
         """Initialize scene resources and state."""
@@ -96,6 +100,7 @@ class DisneyScene(Scene):
         self._reset_state()
         self._initialize_stars()
         self._load_assets()
+        self._load_photos()
 
     def _reset_state(self):
         """Reset all animation state variables."""
@@ -143,6 +148,62 @@ class DisneyScene(Scene):
             setter(sprite)
         except Exception as e:
             print(f"Failed to load {name} sprite: {e}")
+    
+    def _load_photos(self):
+        """Load real photos for floating around castle."""
+        import os
+        photo_folder = os.path.join('art', 'photos')
+        
+        # Try to load real photos first
+        loaded_photos = False
+        try:
+            if os.path.isdir(photo_folder):
+                photo_files = [f for f in os.listdir(photo_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+                for photo_file in photo_files:
+                    try:
+                        photo_path = os.path.join(photo_folder, photo_file)
+                        photo = pygame.image.load(photo_path).convert_alpha()
+                        # Resize to reasonable size (max 150px on longest side)
+                        w, h = photo.get_size()
+                        scale_factor = min(150 / w, 150 / h)
+                        new_w = int(w * scale_factor)
+                        new_h = int(h * scale_factor)
+                        photo = pygame.transform.scale(photo, (new_w, new_h))
+                        self.photos.append(photo)
+                        loaded_photos = True
+                    except Exception as e:
+                        print(f"Could not load photo {photo_file}: {e}")
+        except Exception as e:
+            print(f"Could not load photos: {e}")
+        
+        # If no photos found, create sample placeholder rectangles
+        if not loaded_photos:
+            print("No photos found, using placeholder rectangles")
+            colors = [
+                (255, 200, 200), (200, 255, 200), (200, 200, 255),
+                (255, 255, 200), (255, 200, 255), (200, 255, 255),
+            ]
+            for i, color in enumerate(colors):
+                photo = pygame.Surface((120, 120))
+                photo.fill(color)
+                pygame.draw.rect(photo, (100, 100, 100), (0, 0, 120, 120), 3)
+                font = pygame.font.Font(None, 24)
+                text = font.render(f"PHOTO {i+1}", True, (50, 50, 50))
+                text_rect = text.get_rect(center=(60, 60))
+                photo.blit(text, text_rect)
+                self.photos.append(photo)
+        
+        # Initialize photo positions with random floating motion
+        for i, photo in enumerate(self.photos):
+            x = random.randint(100, 924)
+            y = random.randint(100, 600)
+            self.photo_data.append({
+                'x': x, 'y': y, 'scale': random.uniform(0.7, 1.0),
+                'rotation': random.uniform(-10, 10),
+                'vx': random.uniform(-40, 40),
+                'vy': random.uniform(-40, 40),
+                'rotation_speed': random.uniform(-15, 15)
+            })
 
     def handle_event(self, event: pygame.event.EventType):
         """Handle keyboard input."""
@@ -153,9 +214,23 @@ class DisneyScene(Scene):
         """Update scene state."""
         self._update_stars(dt)
         self._update_hint_fade(dt)
+        self._update_photos(dt)
         
         if self.kissed:
             self._update_kiss_sequence(dt)
+    
+    def _update_photos(self, dt):
+        """Update floating photo positions."""
+        for data in self.photo_data:
+            data['x'] += data['vx'] * dt
+            data['y'] += data['vy'] * dt
+            data['rotation'] += data['rotation_speed'] * dt
+            
+            # Bounce off edges
+            if data['x'] < 50 or data['x'] > 974:
+                data['vx'] *= -1
+            if data['y'] < 50 or data['y'] > 718:
+                data['vy'] *= -1
 
     def _update_stars(self, dt):
         """Update star twinkling animation."""
@@ -256,12 +331,31 @@ class DisneyScene(Scene):
         self._draw_ground(surface, w, h)
         self._draw_castle(surface, w, h)
         
+        # Draw floating photos
+        self._draw_photos(surface)
+        
         # Draw characters
         char_y = h - self.CHAR_Y_OFFSET
         self._draw_characters(surface, w, char_y)
         
         # Draw UI
         self._draw_hint_or_effects(surface, w, h, char_y)
+    
+    def _draw_photos(self, surface):
+        """Draw floating photos around the scene."""
+        for photo, data in zip(self.photos, self.photo_data):
+            # Apply rotation and scale
+            scaled_photo = pygame.transform.rotozoom(photo, data['rotation'], data['scale'])
+            photo_rect = scaled_photo.get_rect(center=(int(data['x']), int(data['y'])))
+            
+            # Add subtle shadow
+            shadow = pygame.Surface(scaled_photo.get_size(), pygame.SRCALPHA)
+            shadow.fill((0, 0, 0, 80))
+            shadow_rect = shadow.get_rect(center=(int(data['x'] + 3), int(data['y'] + 3)))
+            surface.blit(shadow, shadow_rect)
+            
+            # Draw photo
+            surface.blit(scaled_photo, photo_rect)
 
     def _draw_stars(self, surface):
         """Draw twinkling stars."""
