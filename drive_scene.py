@@ -362,10 +362,6 @@ class DriveScene(Scene):
         # Draw the blue car
         if self.blue_car:
             surface.blit(self.blue_car, (int(self.car_x), int(self.car_y)))
-
-        # UI
-        t = self.font.render(f"Time: {int(self.timer)}s", True, (255, 255, 255))
-        surface.blit(t, (10, 10))
         
         # Draw collision message popup
         if self.current_message:
