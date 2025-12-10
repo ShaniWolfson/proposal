@@ -33,6 +33,7 @@ class DinnerScene(Scene):
 
     def __init__(self, manager=None):
         super().__init__(manager)
+        self.music_file = "art/music/dinner/marryyou.mp3"  # Set your music file here
         self.font = None
         self.dialog = None
         # NPC positions (for display only)
@@ -321,6 +322,11 @@ class DinnerScene(Scene):
                 self.meeting_pos = (512, 550)  # 750 - 200 offset
                 self.maria_at_meeting = False
                 self.shani_at_meeting = False
+                # Setup Maria's path waypoints - always go left to wall, down, then right
+                mx, my = self.player_pos
+                # Go all the way left (x=64 is near left wall), then down past table, then right to meeting
+                self.maria_waypoints = [(64, my), (64, 550), (512 - 30, 550)]
+                self.maria_current_waypoint = 0
             elif event.key in (pygame.K_SPACE, pygame.K_RETURN):
                 # If dialogue is visible and we're interacting, advance it
                 if self.dialog.visible and self.interacting:
@@ -434,8 +440,9 @@ class DinnerScene(Scene):
                 facing = getattr(self, 'maria_facing', 'down')
             self.maria_facing = facing
             self.player_pos = (mx, my)
-            # Update Maria's animation
-            self._update_character_animation(self.maria_anim_mgr, self.maria_facing, moving)
+            # Update Maria's animation (skip automatic updates during proposal sequence)
+            if not self.p2_active:
+                self._update_character_animation(self.maria_anim_mgr, self.maria_facing, moving)
             
             # Make all NPCs with sprites face Maria continuously
             self._update_npc_facing(mx, my)
@@ -446,33 +453,40 @@ class DinnerScene(Scene):
                 # Move both Maria and Shani to meeting position
                 meeting_x, meeting_y = self.meeting_pos
                 
-                # Move Maria to meeting position (left side)
+                # Move Maria to meeting position (left side) using waypoints
                 if not self.maria_at_meeting:
-                    maria_target_x = meeting_x - 30
-                    maria_target_y = meeting_y
                     mx, my = self.player_pos
                     
-                    dx = maria_target_x - mx
-                    dy = maria_target_y - my
-                    distance = math.hypot(dx, dy)
-                    
-                    if distance > 5:
-                        # Maria still moving
-                        nx = dx / distance if distance > 0 else 0
-                        ny = dy / distance if distance > 0 else 0
-                        speed = 150  # Maria's walking speed
-                        mx += nx * speed * dt
-                        my += ny * speed * dt
-                        self.player_pos = (mx, my)
+                    # Check if we have waypoints to follow
+                    if self.maria_current_waypoint < len(self.maria_waypoints):
+                        # Move towards current waypoint
+                        target_x, target_y = self.maria_waypoints[self.maria_current_waypoint]
                         
-                        # Determine Maria's facing
-                        if abs(dx) > abs(dy):
-                            facing = 'left' if dx < 0 else 'right'
+                        dx = target_x - mx
+                        dy = target_y - my
+                        distance = math.hypot(dx, dy)
+                        
+                        if distance > 5:
+                            # Maria still moving towards waypoint
+                            nx = dx / distance if distance > 0 else 0
+                            ny = dy / distance if distance > 0 else 0
+                            speed = 150  # Maria's walking speed
+                            mx += nx * speed * dt
+                            my += ny * speed * dt
+                            self.player_pos = (mx, my)
+                            
+                            # Determine Maria's facing
+                            if abs(dx) > abs(dy):
+                                facing = 'left' if dx < 0 else 'right'
+                            else:
+                                facing = 'up' if dy < 0 else 'down'
+                            self.maria_facing = facing
+                            self._update_character_animation(self.maria_anim_mgr, facing, is_moving=True)
                         else:
-                            facing = 'up' if dy < 0 else 'down'
-                        self.maria_facing = facing
-                        self._update_character_animation(self.maria_anim_mgr, facing, is_moving=True)
+                            # Reached current waypoint, move to next
+                            self.maria_current_waypoint += 1
                     else:
+                        # All waypoints reached
                         self.maria_at_meeting = True
                         self.maria_facing = 'right'
                         self._update_character_animation(self.maria_anim_mgr, 'right', is_moving=False)
@@ -612,7 +626,18 @@ class DinnerScene(Scene):
             surface.fill((80, 40, 30))
             w, h = surface.get_size()
             # draw table (adjusted for -200 offset: 540 - 200 = 340)
-            pygame.draw.rect(surface, (160, 120, 80), (200, 340, 880, 160))
+            # Table base
+            pygame.draw.rect(surface, (120, 80, 50), (200, 340, 880, 160))
+            # Tablecloth - white/cream with slight transparency look
+            tablecloth_rect = pygame.Rect(190, 330, 900, 180)
+            pygame.draw.rect(surface, (240, 235, 220), tablecloth_rect)
+            # Tablecloth border/trim
+            pygame.draw.rect(surface, (200, 180, 150), tablecloth_rect, 3)
+            # Add decorative pattern (simple stripes or dots)
+            for i in range(200, 1080, 40):
+                pygame.draw.line(surface, (220, 210, 195), (i, 335), (i, 505), 1)
+            # Add subtle shadow under tablecloth
+            pygame.draw.rect(surface, (100, 60, 40), (195, 505, 890, 8))
 
         # Draw NPCs around table
         for i, (name, _) in enumerate(self.npcs):

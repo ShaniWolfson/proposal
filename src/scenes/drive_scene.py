@@ -57,7 +57,7 @@ class DriveScene(Scene):
         # Traffic cars
         self.traffic_cars = []  # List of {x, y, sprite, speed}
         self.traffic_spawn_timer = 0.0
-        self.traffic_spawn_interval = 3.0  # Spawn a car every 3 seconds
+        self.traffic_spawn_interval = 1.5  # Spawn a car every 1.5 seconds (faster)
         self.next_car_index = 0  # Track which car to spawn next for cycling
         
         # Dialogue messages for collisions
@@ -88,6 +88,14 @@ class DriveScene(Scene):
         self.road_x = 0
         self.current_message = None
         self.message_timer = 0.0
+        
+        # Load horn sound effect
+        try:
+            self.horn_sound = pygame.mixer.Sound("art/music/drive/horn.mp3")
+            self.horn_sound.set_volume(0.6)
+        except Exception as e:
+            print(f"Failed to load horn sound: {e}")
+            self.horn_sound = None
         self.message_cooldown = 0.0
         
         # Load the road background based on time of day
@@ -119,8 +127,15 @@ class DriveScene(Scene):
         
         # Initialize traffic
         self.traffic_cars = []
-        self.traffic_spawn_timer = self.traffic_spawn_interval
+        self.traffic_spawn_timer = 0.0  # Spawn first car immediately
         self.next_car_index = 0
+        
+        # Spawn initial cars to make scene feel populated from start
+        for i in range(3):
+            self.spawn_traffic_car()
+            # Offset each car so they don't overlap, starting closer to screen
+            if self.traffic_cars:
+                self.traffic_cars[-1]['x'] = 600 + (i * 250)
 
     def _get_player_car_index(self):
         """Get player car index based on time of day."""
@@ -133,7 +148,11 @@ class DriveScene(Scene):
                 if i != player_car and i not in self.EXCLUDED_CARS]
 
     def handle_event(self, event: pygame.event.EventType):
-        pass
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                # Play horn sound when spacebar is pressed
+                if hasattr(self, 'horn_sound') and self.horn_sound:
+                    self.horn_sound.play()
     
     def spawn_traffic_car(self):
         """Spawn a traffic car on the road, cycling through available cars."""

@@ -410,6 +410,10 @@ class ApartmentScene(Scene):
                     # Move Maria to door position
                     self.player_pos[0] = 45
                     self.cutscene_step = 0
+                    # Start walking animation immediately
+                    if self.maria_anim:
+                        self.maria_anim.play('walk_right')
+                        self.maria_anim.update(0)  # Initialize the first frame
             
             elif self.cutscene_step == 0:
                 # Step 0: Maria walks right from door on left wall
@@ -417,8 +421,11 @@ class ApartmentScene(Scene):
                 if self.player_pos[0] < target_x:
                     self.player_pos[0] += self.player_speed * dt
                     self.player_facing = 'right'
-                    if self.maria_anim and self.maria_anim.current != 'walk_right':
-                        self.maria_anim.play('walk_right')
+                    if self.maria_anim:
+                        # Update animation during cutscene
+                        if self.maria_anim.current != 'walk_right':
+                            self.maria_anim.play('walk_right')
+                        self.maria_anim.update(dt * 1000)
                 else:
                     self.player_pos[0] = target_x
                     self.cutscene_step = 1
@@ -437,6 +444,9 @@ class ApartmentScene(Scene):
                         self.shani_facing = 'left'
                         if self.shani_anim and self.shani_anim.current != 'walk_left':
                             self.shani_anim.play('walk_left')
+                        # Update animation during cutscene
+                        if self.shani_anim:
+                            self.shani_anim.update(dt * 1000)
                     else:
                         self.shani_pos[0] = target_x
                         self.cutscene_substep = 1
@@ -454,6 +464,9 @@ class ApartmentScene(Scene):
                             anim_name = 'walk_up'
                         if self.shani_anim and self.shani_anim.current != anim_name:
                             self.shani_anim.play(anim_name)
+                        # Update animation during cutscene
+                        if self.shani_anim:
+                            self.shani_anim.update(dt * 1000)
                     else:
                         self.shani_pos[1] = target_y
                         self.cutscene_substep = 2
@@ -674,8 +687,8 @@ class ApartmentScene(Scene):
             if DEBUG:
                 print(f"Both sitting! Showing game overlay. shani_sitting={self.shani_sitting}, maria_sitting={self.maria_sitting}")
         
-        # Update Maria animation
-        if self.maria_anim and not self.maria_sitting:
+        # Update Maria animation (skip automatic updates during cutscene)
+        if self.maria_anim and not self.maria_sitting and not self.cutscene_active:
             anim_key = f"{'walk' if is_moving else 'idle'}_{self.player_facing}"
             if self.maria_anim.current != anim_key:
                 self.maria_anim.play(anim_key)
