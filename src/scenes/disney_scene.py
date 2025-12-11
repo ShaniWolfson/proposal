@@ -8,7 +8,7 @@ class DisneyScene(Scene):
     """Disney World scene: characters kiss at castle with fireworks."""
 
     # Constants
-    TIMER_DURATION = 13.0
+    TIMER_DURATION = 30.0
     HEART_DELAY = 5.0
     HEART_GROW_SPEED = 0.8
     HEART_BASE_SIZE = 350
@@ -89,9 +89,15 @@ class DisneyScene(Scene):
         self.star_alphas = {}
         self.kiss_animation_progress = 0
         
-        # Photo montage
+        # Photo montage (after heart animation)
         self.photos = []
-        self.photo_data = []
+        self.photo_positions = []  # List of (x, y) positions for each photo
+        self.montage_active = False
+        self.current_photo_index = 0
+        self.photo_display_time = 0.15  # Time each photo stays on screen
+        self.photo_fade_time = 0.15  # Fade in/out duration
+        self.photo_timer = 0.0
+        self.displayed_photos = []  # List of (photo, position, alpha) for photos on screen
 
     def start(self):
         """Initialize scene resources and state."""
@@ -179,31 +185,22 @@ class DisneyScene(Scene):
         # If no photos found, create sample placeholder rectangles
         if not loaded_photos:
             print("No photos found, using placeholder rectangles")
-            colors = [
-                (255, 200, 200), (200, 255, 200), (200, 200, 255),
-                (255, 255, 200), (255, 200, 255), (200, 255, 255),
-            ]
-            for i, color in enumerate(colors):
-                photo = pygame.Surface((120, 120))
+            import random
+            for i in range(50):
+                # Generate random pastel colors
+                color = (
+                    random.randint(150, 255),
+                    random.randint(150, 255),
+                    random.randint(150, 255)
+                )
+                photo = pygame.Surface((180, 180))
                 photo.fill(color)
-                pygame.draw.rect(photo, (100, 100, 100), (0, 0, 120, 120), 3)
+                pygame.draw.rect(photo, (100, 100, 100), (0, 0, 180, 180), 3)
                 font = pygame.font.Font(None, 24)
-                text = font.render(f"PHOTO {i+1}", True, (50, 50, 50))
-                text_rect = text.get_rect(center=(60, 60))
+                text = font.render(f"#{i+1}", True, (50, 50, 50))
+                text_rect = text.get_rect(center=(90, 90))
                 photo.blit(text, text_rect)
                 self.photos.append(photo)
-        
-        # Initialize photo positions with random floating motion
-        for i, photo in enumerate(self.photos):
-            x = random.randint(100, 924)
-            y = random.randint(100, 600)
-            self.photo_data.append({
-                'x': x, 'y': y, 'scale': random.uniform(0.7, 1.0),
-                'rotation': random.uniform(-10, 10),
-                'vx': random.uniform(-40, 40),
-                'vy': random.uniform(-40, 40),
-                'rotation_speed': random.uniform(-15, 15)
-            })
 
     def handle_event(self, event: pygame.event.EventType):
         """Handle keyboard input."""
@@ -220,17 +217,75 @@ class DisneyScene(Scene):
             self._update_kiss_sequence(dt)
     
     def _update_photos(self, dt):
-        """Update floating photo positions."""
-        for data in self.photo_data:
-            data['x'] += data['vx'] * dt
-            data['y'] += data['vy'] * dt
-            data['rotation'] += data['rotation_speed'] * dt
+        """Update photo montage - add photos one by one to fill screen."""
+        if not self.montage_active or not self.photos:
+            return
+        
+        self.photo_timer += dt
+        total_cycle = self.photo_fade_time * 2 + self.photo_display_time
+        
+        # Check if it's time to add a new photo
+        if self.photo_timer >= total_cycle:
+            # Add the current photo to the displayed list with a random position
+            if self.current_photo_index < len(self.photos):
+                import random
+                # Screen dimensions
+                screen_w, screen_h = 1024, 768
+                
+                # Try to find a position that doesn't overlap too much with existing photos
+                min_distance = 140  # Minimum distance between photo centers
+                max_attempts = 50
+                best_x, best_y = None, None
+                best_min_dist = 0
+                
+                for attempt in range(max_attempts):
+                    x = random.randint(90, screen_w - 90)
+                    y = random.randint(90, screen_h - 90)
+                    
+                    # Calculate minimum distance to any existing photo
+                    if self.displayed_photos:
+                        min_dist = min(
+                            ((x - p['x'])**2 + (y - p['y'])**2)**0.5
+                            for p in self.displayed_photos
+                        )
+                    else:
+                        min_dist = float('inf')
+                    
+                    # If we found a good spot with enough distance, use it
+                    if min_dist >= min_distance:
+                        best_x, best_y = x, y
+                        break
+                    
+                    # Otherwise, keep track of the best position so far
+                    if min_dist > best_min_dist:
+                        best_min_dist = min_dist
+                        best_x, best_y = x, y
+                
+                x, y = best_x, best_y
+                
+                self.displayed_photos.append({
+                    'photo': self.photos[self.current_photo_index],
+                    'x': x,
+                    'y': y,
+                    'alpha': 0,
+                    'timer': 0
+                })
+                
+                self.current_photo_index += 1
+                if self.current_photo_index >= len(self.photos):
+                    self.current_photo_index = 0  # Loop back
             
-            # Bounce off edges
-            if data['x'] < 50 or data['x'] > 974:
-                data['vx'] *= -1
-            if data['y'] < 50 or data['y'] > 718:
-                data['vy'] *= -1
+            self.photo_timer = 0.0
+        
+        # Update alpha for all displayed photos
+        for photo_data in self.displayed_photos:
+            photo_data['timer'] += dt
+            if photo_data['timer'] < self.photo_fade_time:
+                # Fade in
+                photo_data['alpha'] = int(255 * (photo_data['timer'] / self.photo_fade_time))
+            else:
+                # Stay at full alpha
+                photo_data['alpha'] = 255
 
     def _update_stars(self, dt):
         """Update star twinkling animation."""
@@ -266,6 +321,9 @@ class DisneyScene(Scene):
         self.heart_delay_timer += dt
         if self.heart_delay_timer >= self.HEART_DELAY and self.heart_scale < 1.0:
             self.heart_scale = min(1.0, self.heart_scale + dt * self.HEART_GROW_SPEED)
+            # Start photo montage when heart reaches full size
+            if self.heart_scale >= 1.0:
+                self.montage_active = True
         
         # Spawn and update fireworks
         self._update_fireworks(dt)
@@ -331,31 +389,44 @@ class DisneyScene(Scene):
         self._draw_ground(surface, w, h)
         self._draw_castle(surface, w, h)
         
-        # Draw floating photos
-        self._draw_photos(surface)
-        
         # Draw characters
         char_y = h - self.CHAR_Y_OFFSET
         self._draw_characters(surface, w, char_y)
         
-        # Draw UI
+        # Draw UI (heart and fireworks)
         self._draw_hint_or_effects(surface, w, h, char_y)
+        
+        # Draw photo montage (last, so it overlays everything including the heart)
+        if self.montage_active:
+            self._draw_photos(surface)
     
     def _draw_photos(self, surface):
-        """Draw floating photos around the scene."""
-        for photo, data in zip(self.photos, self.photo_data):
-            # Apply rotation and scale
-            scaled_photo = pygame.transform.rotozoom(photo, data['rotation'], data['scale'])
-            photo_rect = scaled_photo.get_rect(center=(int(data['x']), int(data['y'])))
+        """Draw all displayed photos filling the screen."""
+        if not self.displayed_photos:
+            return
+        
+        # Draw each photo at its position with its current alpha
+        for photo_data in self.displayed_photos:
+            if photo_data['alpha'] <= 0:
+                continue
             
-            # Add subtle shadow
-            shadow = pygame.Surface(scaled_photo.get_size(), pygame.SRCALPHA)
-            shadow.fill((0, 0, 0, 80))
-            shadow_rect = shadow.get_rect(center=(int(data['x'] + 3), int(data['y'] + 3)))
+            photo = photo_data['photo']
+            
+            # Create a copy with alpha applied
+            photo_with_alpha = photo.copy()
+            photo_with_alpha.set_alpha(int(photo_data['alpha']))
+            
+            # Position the photo
+            photo_rect = photo_with_alpha.get_rect(center=(int(photo_data['x']), int(photo_data['y'])))
+            
+            # Draw subtle shadow
+            shadow = pygame.Surface(photo_with_alpha.get_size(), pygame.SRCALPHA)
+            shadow.fill((0, 0, 0, 100))
+            shadow_rect = shadow.get_rect(center=(int(photo_data['x'] + 3), int(photo_data['y'] + 3)))
             surface.blit(shadow, shadow_rect)
             
             # Draw photo
-            surface.blit(scaled_photo, photo_rect)
+            surface.blit(photo_with_alpha, photo_rect)
 
     def _draw_stars(self, surface):
         """Draw twinkling stars."""
